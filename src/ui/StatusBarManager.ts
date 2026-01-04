@@ -22,12 +22,20 @@ export class StatusBarManager {
     const context = filePath ? this.resolver.resolve(filePath) : null;
 
     if (this.instanceItem) {
-      const instanceText = context?.instance ? `Jira: ${context.instance.name}` : 'Jira: None';
+      let instanceText = 'Jira: None';
+      if (context?.instance) {
+        const suffix = context.isDefault ? ' (default)' : context.isInstanceInherited ? ' (inherited)' : '';
+        instanceText = `Jira: ${context.instance.name}${suffix}`;
+      }
       this.instanceItem.setText(instanceText);
     }
 
     if (this.projectItem) {
-      const projectText = context?.projectKey ? `Project: ${context.projectKey}` : 'Project: None';
+      let projectText = 'Project: None';
+      if (context?.projectKey) {
+        const suffix = context.isProjectInherited ? ' (inherited)' : '';
+        projectText = `Project: ${context.projectKey}${suffix}`;
+      }
       this.projectItem.setText(projectText);
     }
   }

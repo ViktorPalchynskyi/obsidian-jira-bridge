@@ -22,4 +22,7 @@ export interface ResolvedContext {
   instanceMapping: FolderMapping | null;
   projectKey: string | null;
   projectMapping: FolderMapping | null;
+  isInstanceInherited: boolean;
+  isProjectInherited: boolean;
+  isDefault: boolean;
 }

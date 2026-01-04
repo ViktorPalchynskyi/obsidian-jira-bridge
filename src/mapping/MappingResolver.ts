@@ -13,21 +13,30 @@ export class MappingResolver {
     const projectMapping = this.findProjectMapping(folderPath);
 
     if (!instanceMapping) {
+      const defaultInstance = this.settings.instances.find(i => i.isDefault && i.enabled) || null;
       return {
-        instance: null,
+        instance: defaultInstance,
         instanceMapping: null,
         projectKey: null,
         projectMapping: null,
+        isInstanceInherited: false,
+        isProjectInherited: false,
+        isDefault: defaultInstance !== null,
       };
     }
 
     const instance = this.settings.instances.find(i => i.id === instanceMapping.instanceId) || null;
+    const isInstanceInherited = instanceMapping.folderPath !== folderPath;
+    const isProjectInherited = projectMapping ? projectMapping.folderPath !== folderPath : false;
 
     return {
       instance,
       instanceMapping,
       projectKey: projectMapping?.projectKey || null,
       projectMapping,
+      isInstanceInherited,
+      isProjectInherited,
+      isDefault: false,
     };
   }
 

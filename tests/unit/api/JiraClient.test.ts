@@ -169,4 +169,131 @@ describe('JiraClient', () => {
       expect(result.error).toBe('Something unexpected happened');
     });
   });
+
+  describe('getIssue', () => {
+    it('should return issue with status', async () => {
+      const instance = createMockInstance();
+      const client = new JiraClient(instance);
+
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 200,
+        json: {
+          key: 'TEST-123',
+          fields: {
+            summary: 'Test Issue',
+            status: {
+              id: '1',
+              name: 'In Progress',
+              statusCategory: { id: 4, key: 'indeterminate', name: 'In Progress' },
+            },
+          },
+        },
+        headers: {},
+        arrayBuffer: new ArrayBuffer(0),
+        text: '',
+      });
+
+      const result = await client.getIssue('TEST-123');
+
+      expect(result.key).toBe('TEST-123');
+      expect(result.summary).toBe('Test Issue');
+      expect(result.status.name).toBe('In Progress');
+    });
+
+    it('should throw error for 404', async () => {
+      const instance = createMockInstance();
+      const client = new JiraClient(instance);
+
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 404,
+        json: {},
+        headers: {},
+        arrayBuffer: new ArrayBuffer(0),
+        text: '',
+      });
+
+      await expect(client.getIssue('INVALID-999')).rejects.toThrow('Failed to fetch issue: 404');
+    });
+  });
+
+  describe('getTransitions', () => {
+    it('should return available transitions', async () => {
+      const instance = createMockInstance();
+      const client = new JiraClient(instance);
+
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 200,
+        json: {
+          transitions: [
+            {
+              id: '21',
+              name: 'Start Progress',
+              to: { id: '3', name: 'In Progress', statusCategory: { id: 4, key: 'indeterminate', name: 'In Progress' } },
+              hasScreen: false,
+              isGlobal: false,
+              isInitial: false,
+              isConditional: false,
+            },
+            {
+              id: '31',
+              name: 'Done',
+              to: { id: '10001', name: 'Done', statusCategory: { id: 3, key: 'done', name: 'Done' } },
+              hasScreen: false,
+              isGlobal: false,
+              isInitial: false,
+              isConditional: false,
+            },
+          ],
+        },
+        headers: {},
+        arrayBuffer: new ArrayBuffer(0),
+        text: '',
+      });
+
+      const result = await client.getTransitions('TEST-123');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].name).toBe('Start Progress');
+      expect(result[1].to.name).toBe('Done');
+    });
+  });
+
+  describe('transitionIssue', () => {
+    it('should execute transition successfully', async () => {
+      const instance = createMockInstance();
+      const client = new JiraClient(instance);
+
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 204,
+        json: {},
+        headers: {},
+        arrayBuffer: new ArrayBuffer(0),
+        text: '',
+      });
+
+      await expect(client.transitionIssue('TEST-123', '21')).resolves.toBeUndefined();
+
+      expect(mockRequestUrl).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ transition: { id: '21' } }),
+        }),
+      );
+    });
+
+    it('should throw error on failure', async () => {
+      const instance = createMockInstance();
+      const client = new JiraClient(instance);
+
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 400,
+        json: {},
+        headers: {},
+        arrayBuffer: new ArrayBuffer(0),
+        text: '',
+      });
+
+      await expect(client.transitionIssue('TEST-123', '999')).rejects.toThrow('Failed to transition issue: 400');
+    });
+  });
 });

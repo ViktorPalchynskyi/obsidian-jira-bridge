@@ -42,4 +42,5 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     cacheEnabled: true,
     cacheTTL: 300,
   },
+  recentIssues: [],
 };

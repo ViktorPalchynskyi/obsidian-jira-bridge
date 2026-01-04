@@ -7,7 +7,8 @@ import { JiraBridgeSettingsTab } from '../settings';
 import { DEFAULT_SETTINGS, DEFAULT_CONTENT_PARSING } from '../constants/defaults';
 import { MappingResolver } from '../mapping';
 import { StatusBarManager } from '../ui';
-import { CreateTicketModal, BulkCreateProgressModal, BulkCreateReportModal } from '../modals';
+import { CreateTicketModal, BulkCreateProgressModal, BulkCreateReportModal, StatusChangeModal } from '../modals';
+import type { RecentIssue } from '../modals';
 import { parseSummaryFromContent, parseDescriptionFromContent } from '../utils';
 import { BulkCreateService } from '../services/bulk';
 
@@ -81,6 +82,12 @@ export class JiraBridgePlugin extends Plugin {
       name: 'Create Jira issue',
       hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'j' }],
       callback: () => this.openCreateTicketModal(),
+    });
+
+    this.addCommand({
+      id: 'change-status',
+      name: 'Change Issue Status',
+      callback: () => this.openStatusChangeModal(),
     });
   }
 
@@ -249,6 +256,61 @@ export class JiraBridgePlugin extends Plugin {
 
     const reportModal = new BulkCreateReportModal(this.app, result);
     reportModal.open();
+  }
+
+  private async openStatusChangeModal(): Promise<void> {
+    const enabledInstances = this.settings.instances.filter(i => i.enabled);
+    if (enabledInstances.length === 0) {
+      return;
+    }
+
+    const defaultInstance = enabledInstances.find(i => i.isDefault) || enabledInstances[0];
+
+    const recentIssues: RecentIssue[] = (this.settings.recentIssues || []).sort((a, b) => b.timestamp - a.timestamp).slice(0, 10);
+
+    const modal = new StatusChangeModal(this.app, {
+      instances: enabledInstances,
+      recentIssues,
+      defaultInstanceId: defaultInstance?.id,
+    });
+
+    const result = await modal.open();
+
+    if (result) {
+      await this.addRecentIssue(result.issueKey, modal.getInstanceId());
+    }
+  }
+
+  private async addRecentIssue(issueKey: string, instanceId: string): Promise<void> {
+    const instance = this.settings.instances.find(i => i.id === instanceId);
+    if (!instance) return;
+
+    const { JiraClient } = await import('../api/JiraClient');
+    const client = new JiraClient(instance);
+
+    try {
+      const issue = await client.getIssue(issueKey);
+
+      const existing = this.settings.recentIssues.findIndex(r => r.key === issueKey && r.instanceId === instanceId);
+      if (existing !== -1) {
+        this.settings.recentIssues.splice(existing, 1);
+      }
+
+      this.settings.recentIssues.unshift({
+        key: issue.key,
+        summary: issue.summary,
+        instanceId,
+        timestamp: Date.now(),
+      });
+
+      if (this.settings.recentIssues.length > 10) {
+        this.settings.recentIssues = this.settings.recentIssues.slice(0, 10);
+      }
+
+      await this.saveSettings();
+    } catch {
+      // Ignore errors when saving recent issue
+    }
   }
 
   private openSettings(): void {

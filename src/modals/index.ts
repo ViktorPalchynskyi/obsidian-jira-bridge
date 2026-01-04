@@ -4,7 +4,7 @@ export type { JiraInstanceModalOptions } from './JiraInstanceModal/types';
 export { CreateTicketModal } from './CreateTicketModal/CreateTicketModal';
 export { StatusChangeModal } from './StatusChangeModal/StatusChangeModal';
 export type { CreateTicketResult } from './CreateTicketModal/types';
-export type { StatusChangeResult } from './StatusChangeModal/types';
+export type { StatusChangeResult, StatusChangeModalOptions, RecentIssue } from './StatusChangeModal/types';
 export { FolderSuggestModal } from './FolderSuggestModal/FolderSuggestModal';
 export { FolderMappingModal } from './FolderMappingModal/FolderMappingModal';
 export type { FolderMappingModalOptions } from './FolderMappingModal/types';

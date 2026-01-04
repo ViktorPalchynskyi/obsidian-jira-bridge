@@ -1,5 +1,14 @@
 import { requestUrl, RequestUrlResponse } from 'obsidian';
-import type { JiraInstance, JiraProject, JiraIssueType, JiraPriority, CreateIssueResponse, JiraFieldMeta } from '../types';
+import type {
+  JiraInstance,
+  JiraProject,
+  JiraIssueType,
+  JiraPriority,
+  CreateIssueResponse,
+  JiraFieldMeta,
+  JiraStatus,
+  JiraTransition,
+} from '../types';
 import type { TestConnectionResult, JiraUser } from './types';
 import { markdownToAdf } from '../utils/markdownToAdf';
 
@@ -358,6 +367,59 @@ export class JiraClient {
       key: response.json.key,
       self: response.json.self,
     };
+  }
+
+  async getIssue(issueKey: string): Promise<{ key: string; summary: string; status: JiraStatus }> {
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl(`/rest/api/3/issue/${issueKey}?fields=summary,status`),
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`Failed to fetch issue: ${response.status}`);
+    }
+
+    return {
+      key: response.json.key,
+      summary: response.json.fields.summary,
+      status: response.json.fields.status,
+    };
+  }
+
+  async getTransitions(issueKey: string): Promise<JiraTransition[]> {
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl(`/rest/api/3/issue/${issueKey}/transitions`),
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`Failed to fetch transitions: ${response.status}`);
+    }
+
+    return response.json.transitions.map((t: Record<string, unknown>) => ({
+      id: t.id as string,
+      name: t.name as string,
+      to: t.to as JiraStatus,
+      hasScreen: t.hasScreen as boolean,
+      isGlobal: t.isGlobal as boolean,
+      isInitial: t.isInitial as boolean,
+      isConditional: t.isConditional as boolean,
+    }));
+  }
+
+  async transitionIssue(issueKey: string, transitionId: string): Promise<void> {
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl(`/rest/api/3/issue/${issueKey}/transitions`),
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ transition: { id: transitionId } }),
+    });
+
+    if (response.status !== 204) {
+      throw new Error(`Failed to transition issue: ${response.status}`);
+    }
   }
 
   getIssueUrl(issueKey: string): string {

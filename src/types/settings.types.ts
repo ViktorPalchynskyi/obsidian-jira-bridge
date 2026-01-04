@@ -8,6 +8,14 @@ export interface PluginSettings {
   ui: UISettings;
   createTicket: CreateTicketSettings;
   advanced: AdvancedSettings;
+  recentIssues: RecentIssueEntry[];
+}
+
+export interface RecentIssueEntry {
+  key: string;
+  summary: string;
+  instanceId: string;
+  timestamp: number;
 }
 
 export interface CreateTicketSettings {

@@ -111,12 +111,21 @@ export class JiraBridgePlugin extends Plugin {
       }
     }
 
+    const instanceId = context.instance?.id;
+    const projectKey = context.projectKey;
+    const customFields = this.settings.ui.enableCustomFields
+      ? this.settings.createTicket.customFields.filter(
+          cf => cf.enabled && (!cf.instanceId || cf.instanceId === instanceId) && (!cf.projectKey || cf.projectKey === projectKey),
+        )
+      : [];
+
     const modal = new CreateTicketModal(this.app, {
       instances: this.settings.instances,
       context,
       initialSummary,
       initialDescription,
       filePath: filePath || undefined,
+      customFields,
     });
 
     modal.open();

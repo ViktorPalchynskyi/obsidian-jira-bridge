@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import type { JiraBridgePlugin } from '../core/Plugin';
 import type { JiraInstance, FolderMapping, MappingType } from '../types';
-import { JiraInstanceModal, FolderMappingModal } from '../modals';
+import { JiraInstanceModal, FolderMappingModal, CustomFieldsModal } from '../modals';
 import { JiraClient } from '../api';
 
 export class JiraBridgeSettingsTab extends PluginSettingTab {
@@ -246,13 +246,19 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
       if (childMappings.length > 0) {
         const childContainer = treeItem.createEl('div', { cls: 'mapping-children' });
         for (const childMapping of childMappings) {
-          this.renderMappingCard(childContainer, childMapping, childMapping.projectKey || 'Unknown', 'project');
+          this.renderMappingCard(childContainer, childMapping, childMapping.projectKey || 'Unknown', 'project', instanceMapping.instanceId);
         }
       }
     }
   }
 
-  private renderMappingCard(container: HTMLElement, mapping: FolderMapping, targetName: string, type: MappingType): void {
+  private renderMappingCard(
+    container: HTMLElement,
+    mapping: FolderMapping,
+    targetName: string,
+    type: MappingType,
+    parentInstanceId?: string,
+  ): void {
     const card = container.createEl('div', { cls: `mapping-card mapping-${type}` });
 
     const header = card.createEl('div', { cls: 'mapping-header' });
@@ -276,6 +282,19 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
       });
       addProjectButton.addEventListener('click', async () => {
         await this.handleAddMapping('project', mapping.instanceId, mapping.folderPath);
+      });
+    }
+
+    if (type === 'project' && mapping.projectKey && parentInstanceId) {
+      const customFieldsEnabled = this.plugin.settings.ui.enableCustomFields;
+      const fieldsButton = actions.createEl('button', {
+        text: 'Fields',
+        cls: customFieldsEnabled ? 'mapping-action-btn' : 'mapping-action-btn mod-muted',
+        attr: { 'aria-label': 'Configure custom fields' },
+      });
+      fieldsButton.disabled = !customFieldsEnabled;
+      fieldsButton.addEventListener('click', async () => {
+        await this.handleConfigureFields(mapping, parentInstanceId);
       });
     }
 
@@ -374,6 +393,26 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
     this.display();
   }
 
+  private async handleConfigureFields(mapping: FolderMapping, instanceId: string): Promise<void> {
+    if (!mapping.projectKey) return;
+
+    const instance = this.plugin.settings.instances.find(i => i.id === instanceId);
+    if (!instance) return;
+
+    const modal = new CustomFieldsModal(this.app, {
+      instance,
+      projectKey: mapping.projectKey,
+      customFields: this.plugin.settings.createTicket.customFields,
+    });
+
+    const result = await modal.open();
+
+    if (result) {
+      this.plugin.settings.createTicket.customFields = result.customFields;
+      await this.plugin.saveSettings();
+    }
+  }
+
   private renderUISection(containerEl: HTMLElement): void {
     const section = containerEl.createEl('div', { cls: 'ui-settings-section' });
 
@@ -396,6 +435,19 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
         toggle.setValue(this.plugin.settings.ui.showStatusBarProject).onChange(async value => {
           this.plugin.settings.ui.showStatusBarProject = value;
           await this.plugin.saveSettings();
+        }),
+      );
+
+    new Setting(section).setName('Custom Fields').setHeading();
+
+    new Setting(section)
+      .setName('Enable custom fields')
+      .setDesc('Show additional Jira fields when creating issues. Configure fields per project in Folder Mappings.')
+      .addToggle(toggle =>
+        toggle.setValue(this.plugin.settings.ui.enableCustomFields).onChange(async value => {
+          this.plugin.settings.ui.enableCustomFields = value;
+          await this.plugin.saveSettings();
+          this.display();
         }),
       );
   }

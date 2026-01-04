@@ -1,5 +1,5 @@
 import { requestUrl, RequestUrlResponse } from 'obsidian';
-import type { JiraInstance, JiraProject, JiraIssueType, JiraPriority, CreateIssueResponse } from '../types';
+import type { JiraInstance, JiraProject, JiraIssueType, JiraPriority, CreateIssueResponse, JiraFieldMeta } from '../types';
 import type { TestConnectionResult, JiraUser } from './types';
 
 export class JiraClient {
@@ -109,12 +109,98 @@ export class JiraClient {
     }));
   }
 
+  async getFieldsForIssueType(projectKey: string, issueTypeId: string): Promise<JiraFieldMeta[]> {
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl(`/rest/api/3/issue/createmeta/${projectKey}/issuetypes/${issueTypeId}`),
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`Failed to fetch fields: ${response.status}`);
+    }
+
+    const fields = response.json.fields || response.json.values || [];
+    const systemFields = ['summary', 'description', 'issuetype', 'project', 'priority', 'reporter', 'attachment', 'issuerestriction'];
+
+    return fields
+      .filter((field: Record<string, unknown>) => {
+        const fieldId = field.fieldId as string;
+        return !systemFields.includes(fieldId);
+      })
+      .map((field: Record<string, unknown>) => ({
+        fieldId: field.fieldId as string,
+        name: field.name as string,
+        required: field.required as boolean,
+        schema: field.schema as JiraFieldMeta['schema'],
+        allowedValues: field.allowedValues as JiraFieldMeta['allowedValues'],
+        autoCompleteUrl: field.autoCompleteUrl as string | undefined,
+      }));
+  }
+
+  async getAssignableUsers(projectKey: string): Promise<{ accountId: string; displayName: string }[]> {
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl(`/rest/api/3/user/assignable/search?project=${projectKey}`),
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`Failed to fetch assignable users: ${response.status}`);
+    }
+
+    return response.json.map((user: Record<string, unknown>) => ({
+      accountId: user.accountId as string,
+      displayName: user.displayName as string,
+    }));
+  }
+
+  async getLabels(): Promise<string[]> {
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl('/rest/api/3/label'),
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`Failed to fetch labels: ${response.status}`);
+    }
+
+    return response.json.values || [];
+  }
+
+  async getParentableIssues(projectKey: string): Promise<{ key: string; summary: string; issueType: string }[]> {
+    const jql = `project=${projectKey} AND statusCategory != Done ORDER BY created DESC`;
+    const url = this.buildUrl('/rest/api/3/search/jql') + `?jql=${encodeURIComponent(jql)}&maxResults=50&fields=summary,issuetype`;
+
+    const response: RequestUrlResponse = await requestUrl({
+      url,
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`Failed to search issues: ${response.status}`);
+    }
+
+    return response.json.issues.map((issue: Record<string, unknown>) => {
+      const fields = issue.fields as Record<string, unknown>;
+      const issueType = fields.issuetype as Record<string, unknown>;
+      return {
+        key: issue.key as string,
+        summary: fields.summary as string,
+        issueType: issueType.name as string,
+      };
+    });
+  }
+
   async createIssue(
     projectKey: string,
     issueTypeId: string,
     summary: string,
     description?: string,
     priorityId?: string,
+    customFields?: Record<string, unknown>,
   ): Promise<CreateIssueResponse> {
     const fields: Record<string, unknown> = {
       project: { key: projectKey },
@@ -132,6 +218,12 @@ export class JiraClient {
 
     if (priorityId) {
       fields.priority = { id: priorityId };
+    }
+
+    if (customFields) {
+      for (const [fieldId, value] of Object.entries(customFields)) {
+        fields[fieldId] = value;
+      }
     }
 
     const response: RequestUrlResponse = await requestUrl({

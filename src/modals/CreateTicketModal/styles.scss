@@ -1,10 +1,60 @@
 .jira-bridge-create-ticket {
   min-width: 450px;
 
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+
+    .modal-title {
+      margin: 0;
+    }
+  }
+
+  .advanced-toggle {
+    display: flex;
+    align-items: center;
+  }
+
+  .advanced-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+
+    &:hover {
+      color: var(--text-normal);
+    }
+  }
+
+  .advanced-toggle-input {
+    cursor: pointer;
+  }
+
   .modal-form {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+  }
+
+  .custom-fields-container {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--background-modifier-border);
+    margin-top: 0.5rem;
+
+    .loading-text,
+    .error-text {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    .error-text {
+      color: var(--text-error);
+    }
   }
 
   .field-group {

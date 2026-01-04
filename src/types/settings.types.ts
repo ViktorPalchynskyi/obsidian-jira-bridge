@@ -6,7 +6,20 @@ export interface PluginSettings {
   mappings: FolderMapping[];
   sync: SyncSettings;
   ui: UISettings;
+  createTicket: CreateTicketSettings;
   advanced: AdvancedSettings;
+}
+
+export interface CreateTicketSettings {
+  customFields: CustomFieldConfig[];
+}
+
+export interface CustomFieldConfig {
+  fieldId: string;
+  fieldName: string;
+  enabled: boolean;
+  instanceId?: string;
+  projectKey?: string;
 }
 
 export interface SyncSettings {
@@ -22,6 +35,7 @@ export interface UISettings {
   showStatusBarInstance: boolean;
   showStatusBarProject: boolean;
   defaultModalSize: 'small' | 'medium' | 'large';
+  enableCustomFields: boolean;
 }
 
 export interface AdvancedSettings {

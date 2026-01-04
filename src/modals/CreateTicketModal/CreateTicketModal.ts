@@ -1,7 +1,7 @@
 import { App, Notice } from 'obsidian';
 import { BaseModal } from '../base/BaseModal';
 import { JiraClient } from '../../api';
-import type { JiraProject, JiraIssueType, JiraPriority } from '../../types';
+import type { JiraProject, JiraIssueType, JiraPriority, JiraFieldMeta } from '../../types';
 import type { CreateTicketModalOptions, CreateTicketResult } from './types';
 
 interface FormState {
@@ -18,6 +18,9 @@ interface FormState {
   isLoadingPriorities: boolean;
   isSubmitting: boolean;
   error: string | null;
+  customFieldValues: Record<string, unknown>;
+  customFieldsMeta: JiraFieldMeta[];
+  isLoadingCustomFields: boolean;
 }
 
 export class CreateTicketModal extends BaseModal<CreateTicketResult> {
@@ -30,6 +33,7 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
   private descriptionInput: HTMLTextAreaElement | null = null;
   private submitButton: HTMLButtonElement | null = null;
   private client: JiraClient | null = null;
+  private customFieldsContainer: HTMLElement | null = null;
 
   constructor(app: App, options: CreateTicketModalOptions) {
     super(app);
@@ -48,6 +52,9 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
       isLoadingPriorities: false,
       isSubmitting: false,
       error: null,
+      customFieldValues: {},
+      customFieldsMeta: [],
+      isLoadingCustomFields: false,
     };
 
     if (options.context.instance) {
@@ -73,6 +80,8 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     this.createIssueTypeField(form);
     this.createPriorityField(form);
     this.createDescriptionField(form);
+
+    this.customFieldsContainer = form.createEl('div', { cls: 'custom-fields-container' });
 
     const buttonContainer = contentEl.createEl('div', { cls: 'modal-buttons' });
 
@@ -154,7 +163,11 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
 
     this.issueTypeSelect.addEventListener('change', () => {
       this.state.issueTypeId = this.issueTypeSelect!.value;
+      this.state.customFieldValues = {};
       this.updateSubmitButtonState();
+      if (this.state.issueTypeId && this.hasCustomFields()) {
+        this.loadCustomFieldsMeta();
+      }
     });
   }
 
@@ -367,12 +380,15 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     this.updateSubmitButton('Creating...', true);
 
     try {
+      const customFields = Object.keys(this.state.customFieldValues).length > 0 ? this.state.customFieldValues : undefined;
+
       const result = await this.client.createIssue(
         this.state.projectKey,
         this.state.issueTypeId,
         this.state.summary.trim(),
         this.state.description.trim() || undefined,
         this.state.priorityId || undefined,
+        customFields,
       );
 
       const issueUrl = this.client.getIssueUrl(result.key);
@@ -399,5 +415,281 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
 
   private showError(message: string): void {
     new Notice(`Error: ${message}`, 5000);
+  }
+
+  private hasCustomFields(): boolean {
+    return !!(this.options.customFields && this.options.customFields.length > 0);
+  }
+
+  private async loadCustomFieldsMeta(): Promise<void> {
+    if (!this.client || !this.customFieldsContainer || !this.state.projectKey || !this.state.issueTypeId) return;
+    if (!this.hasCustomFields()) return;
+
+    this.state.isLoadingCustomFields = true;
+    this.customFieldsContainer.innerHTML = '';
+    this.customFieldsContainer.createEl('p', { text: 'Loading custom fields...', cls: 'loading-text' });
+
+    try {
+      const allFields = await this.client.getFieldsForIssueType(this.state.projectKey, this.state.issueTypeId);
+      const configuredFieldIds = this.options.customFields!.map(cf => cf.fieldId);
+      this.state.customFieldsMeta = allFields.filter(f => configuredFieldIds.includes(f.fieldId));
+      this.renderCustomFields();
+    } catch {
+      this.customFieldsContainer.innerHTML = '';
+      this.customFieldsContainer.createEl('p', { text: 'Failed to load custom fields', cls: 'error-text' });
+    } finally {
+      this.state.isLoadingCustomFields = false;
+    }
+  }
+
+  private async renderCustomFields(): Promise<void> {
+    if (!this.customFieldsContainer) return;
+
+    this.customFieldsContainer.innerHTML = '';
+
+    if (this.state.customFieldsMeta.length === 0) {
+      this.customFieldsContainer.createEl('p', {
+        text: 'No custom fields available for this issue type.',
+        cls: 'setting-item-description',
+      });
+      return;
+    }
+
+    for (const field of this.state.customFieldsMeta) {
+      await this.createCustomField(this.customFieldsContainer, field);
+    }
+  }
+
+  private async createCustomField(container: HTMLElement, field: JiraFieldMeta): Promise<void> {
+    const fieldGroup = container.createEl('div', { cls: 'field-group' });
+    const labelText = field.required ? `${field.name} *` : field.name;
+    fieldGroup.createEl('label', { text: labelText });
+
+    const schemaType = field.schema?.type || 'string';
+    const systemField = field.schema?.system;
+
+    if (field.allowedValues && field.allowedValues.length > 0) {
+      this.createSelectField(fieldGroup, field);
+    } else if (schemaType === 'user' || systemField === 'assignee') {
+      await this.createUserField(fieldGroup, field);
+    } else if (schemaType === 'issuelink' || systemField === 'parent') {
+      await this.createParentField(fieldGroup, field, this.state.issueTypeId);
+    } else if (schemaType === 'array' && field.schema?.items === 'string') {
+      await this.createLabelsField(fieldGroup, field);
+    } else if (schemaType === 'number') {
+      this.createNumberField(fieldGroup, field);
+    } else {
+      this.createTextField(fieldGroup, field);
+    }
+  }
+
+  private createSelectField(fieldGroup: HTMLElement, field: JiraFieldMeta): void {
+    const select = fieldGroup.createEl('select', { cls: 'field-select' });
+    select.createEl('option', { text: `Select ${field.name}...`, attr: { value: '' } });
+
+    for (const option of field.allowedValues!) {
+      select.createEl('option', {
+        text: option.name || option.value || option.id,
+        attr: { value: option.id },
+      });
+    }
+
+    select.addEventListener('change', () => {
+      if (select.value) {
+        this.state.customFieldValues[field.fieldId] = { id: select.value };
+      } else {
+        delete this.state.customFieldValues[field.fieldId];
+      }
+    });
+  }
+
+  private async createUserField(fieldGroup: HTMLElement, field: JiraFieldMeta): Promise<void> {
+    const select = fieldGroup.createEl('select', { cls: 'field-select' });
+    select.createEl('option', { text: 'Loading users...', attr: { value: '', disabled: 'true' } });
+
+    try {
+      const users = await this.client!.getAssignableUsers(this.state.projectKey);
+      select.innerHTML = '';
+      select.createEl('option', { text: `Select ${field.name}...`, attr: { value: '' } });
+
+      for (const user of users) {
+        select.createEl('option', {
+          text: user.displayName,
+          attr: { value: user.accountId },
+        });
+      }
+    } catch {
+      select.innerHTML = '';
+      select.createEl('option', { text: 'Failed to load users', attr: { value: '', disabled: 'true' } });
+    }
+
+    select.addEventListener('change', () => {
+      if (select.value) {
+        this.state.customFieldValues[field.fieldId] = { accountId: select.value };
+      } else {
+        delete this.state.customFieldValues[field.fieldId];
+      }
+    });
+  }
+
+  private async createParentField(fieldGroup: HTMLElement, field: JiraFieldMeta, currentIssueTypeId: string): Promise<void> {
+    const select = fieldGroup.createEl('select', { cls: 'field-select' });
+    select.createEl('option', { text: 'Loading issues...', attr: { value: '', disabled: 'true' } });
+
+    const currentIssueType = this.state.issueTypes.find(t => t.id === currentIssueTypeId);
+    const currentTypeName = currentIssueType?.name.toLowerCase() || '';
+
+    const allowedParentTypes: string[] = [];
+    if (currentTypeName === 'story' || currentTypeName === 'task' || currentTypeName === 'bug') {
+      allowedParentTypes.push('epic');
+    }
+    if (currentTypeName === 'sub-task' || currentTypeName === 'subtask') {
+      allowedParentTypes.push('epic', 'story', 'task', 'bug');
+    }
+    if (allowedParentTypes.length === 0) {
+      allowedParentTypes.push('epic', 'story');
+    }
+
+    try {
+      const allIssues = await this.client!.getParentableIssues(this.state.projectKey);
+      const filteredIssues = allIssues.filter(issue => allowedParentTypes.includes(issue.issueType.toLowerCase()));
+
+      select.innerHTML = '';
+      select.createEl('option', { text: `Select ${field.name}...`, attr: { value: '' } });
+
+      if (filteredIssues.length === 0) {
+        select.createEl('option', { text: 'No parent issues found', attr: { value: '', disabled: 'true' } });
+      } else {
+        for (const issue of filteredIssues) {
+          select.createEl('option', {
+            text: `[${issue.issueType}] ${issue.key} - ${issue.summary}`,
+            attr: { value: issue.key },
+          });
+        }
+      }
+    } catch {
+      select.innerHTML = '';
+      select.createEl('option', { text: 'Failed to load issues', attr: { value: '', disabled: 'true' } });
+    }
+
+    select.addEventListener('change', () => {
+      if (select.value) {
+        this.state.customFieldValues[field.fieldId] = { key: select.value };
+      } else {
+        delete this.state.customFieldValues[field.fieldId];
+      }
+    });
+  }
+
+  private async createLabelsField(fieldGroup: HTMLElement, field: JiraFieldMeta): Promise<void> {
+    const selectedLabels: string[] = [];
+    let allLabels: string[] = [];
+
+    const chipsContainer = fieldGroup.createEl('div', { cls: 'chips-container' });
+    chipsContainer.style.display = 'flex';
+    chipsContainer.style.flexWrap = 'wrap';
+    chipsContainer.style.gap = '4px';
+    chipsContainer.style.marginBottom = '8px';
+    chipsContainer.style.minHeight = '24px';
+
+    const select = fieldGroup.createEl('select', { cls: 'field-select' });
+    select.createEl('option', { text: 'Loading labels...', attr: { value: '', disabled: 'true' } });
+
+    const updateSelect = () => {
+      select.innerHTML = '';
+      select.createEl('option', { text: 'Add label...', attr: { value: '' } });
+      for (const label of allLabels) {
+        if (!selectedLabels.includes(label)) {
+          select.createEl('option', { text: label, attr: { value: label } });
+        }
+      }
+    };
+
+    const updateChips = () => {
+      chipsContainer.innerHTML = '';
+      for (const label of selectedLabels) {
+        const chip = chipsContainer.createEl('span', { cls: 'label-chip' });
+        chip.style.background = 'var(--interactive-accent)';
+        chip.style.color = 'var(--text-on-accent)';
+        chip.style.padding = '2px 8px';
+        chip.style.borderRadius = '12px';
+        chip.style.fontSize = '0.8rem';
+        chip.style.display = 'inline-flex';
+        chip.style.alignItems = 'center';
+        chip.style.gap = '4px';
+
+        chip.createEl('span', { text: label });
+        const removeBtn = chip.createEl('span', { text: '×', cls: 'chip-remove' });
+        removeBtn.style.cursor = 'pointer';
+        removeBtn.style.fontWeight = 'bold';
+        removeBtn.addEventListener('click', () => {
+          const idx = selectedLabels.indexOf(label);
+          if (idx > -1) {
+            selectedLabels.splice(idx, 1);
+            updateChips();
+            updateSelect();
+            updateState();
+          }
+        });
+      }
+    };
+
+    const updateState = () => {
+      if (selectedLabels.length > 0) {
+        this.state.customFieldValues[field.fieldId] = [...selectedLabels];
+      } else {
+        delete this.state.customFieldValues[field.fieldId];
+      }
+    };
+
+    try {
+      allLabels = await this.client!.getLabels();
+      updateSelect();
+    } catch {
+      select.innerHTML = '';
+      select.createEl('option', { text: 'Failed to load labels', attr: { value: '', disabled: 'true' } });
+    }
+
+    select.addEventListener('change', () => {
+      if (select.value && !selectedLabels.includes(select.value)) {
+        selectedLabels.push(select.value);
+        updateChips();
+        updateSelect();
+        updateState();
+      }
+      select.value = '';
+    });
+  }
+
+  private createNumberField(fieldGroup: HTMLElement, field: JiraFieldMeta): void {
+    const input = fieldGroup.createEl('input', {
+      type: 'number',
+      cls: 'field-input',
+      attr: { placeholder: `Enter ${field.name}...`, step: 'any' },
+    });
+
+    input.addEventListener('input', () => {
+      if (input.value) {
+        this.state.customFieldValues[field.fieldId] = parseFloat(input.value);
+      } else {
+        delete this.state.customFieldValues[field.fieldId];
+      }
+    });
+  }
+
+  private createTextField(fieldGroup: HTMLElement, field: JiraFieldMeta): void {
+    const input = fieldGroup.createEl('input', {
+      type: 'text',
+      cls: 'field-input',
+      attr: { placeholder: `Enter ${field.name}...` },
+    });
+
+    input.addEventListener('input', () => {
+      if (input.value.trim()) {
+        this.state.customFieldValues[field.fieldId] = input.value.trim();
+      } else {
+        delete this.state.customFieldValues[field.fieldId];
+      }
+    });
   }
 }

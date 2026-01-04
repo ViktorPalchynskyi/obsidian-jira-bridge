@@ -18,6 +18,10 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     showStatusBarInstance: true,
     showStatusBarProject: true,
     defaultModalSize: 'medium',
+    enableCustomFields: false,
+  },
+  createTicket: {
+    customFields: [],
   },
   advanced: {
     requestTimeout: 30000,

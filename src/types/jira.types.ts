@@ -92,6 +92,29 @@ export interface CreateIssueRequest {
   customFields?: Record<string, unknown>;
 }
 
+export interface JiraFieldMeta {
+  fieldId: string;
+  name: string;
+  required: boolean;
+  schema: JiraFieldSchema;
+  allowedValues?: JiraFieldOption[];
+  autoCompleteUrl?: string;
+}
+
+export interface JiraFieldSchema {
+  type: string;
+  system?: string;
+  custom?: string;
+  customId?: number;
+  items?: string;
+}
+
+export interface JiraFieldOption {
+  id: string;
+  value?: string;
+  name?: string;
+}
+
 export interface CreateIssueResponse {
   id: string;
   key: string;

@@ -8,3 +8,5 @@ export type { StatusChangeResult } from './StatusChangeModal/types';
 export { FolderSuggestModal } from './FolderSuggestModal/FolderSuggestModal';
 export { FolderMappingModal } from './FolderMappingModal/FolderMappingModal';
 export type { FolderMappingModalOptions } from './FolderMappingModal/types';
+export { CustomFieldsModal } from './CustomFieldsModal/CustomFieldsModal';
+export type { CustomFieldsModalOptions, CustomFieldsModalResult } from './CustomFieldsModal/types';

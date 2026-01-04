@@ -1,4 +1,4 @@
-import type { JiraInstance, ResolvedContext } from '../../types';
+import type { JiraInstance, ResolvedContext, CustomFieldConfig } from '../../types';
 
 export interface CreateTicketModalOptions {
   instances: JiraInstance[];
@@ -6,6 +6,7 @@ export interface CreateTicketModalOptions {
   initialSummary?: string;
   initialDescription?: string;
   filePath?: string;
+  customFields?: CustomFieldConfig[];
 }
 
 export interface CreateTicketResult {

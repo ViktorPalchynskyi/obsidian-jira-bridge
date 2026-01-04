@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import type { JiraBridgePlugin } from '../core/Plugin';
-import type { JiraInstance } from '../types';
-import { JiraInstanceModal } from '../modals';
+import type { JiraInstance, FolderMapping, MappingType } from '../types';
+import { JiraInstanceModal, FolderMappingModal } from '../modals';
 import { JiraClient } from '../api';
 
 export class JiraBridgeSettingsTab extends PluginSettingTab {
@@ -23,6 +23,7 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
     this.toastContainer = containerEl.createEl('div', { cls: 'settings-toast-container' });
 
     this.renderInstancesSection(containerEl);
+    this.renderMappingsSection(containerEl);
   }
 
   private showToast(message: string, type: 'success' | 'error'): void {
@@ -201,5 +202,174 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
     } else {
       this.showToast(`✗ ${instance.name}: ${result.error}`, 'error');
     }
+  }
+
+  private renderMappingsSection(containerEl: HTMLElement): void {
+    const section = containerEl.createEl('div', { cls: 'folder-mappings-section' });
+
+    const headerSetting = new Setting(section).setName('Folder Mappings').setDesc('Map folders to Jira instances and projects');
+
+    headerSetting.addButton(button =>
+      button.setButtonText('Add Instance Mapping').onClick(async () => {
+        await this.handleAddMapping('instance');
+      }),
+    );
+
+    const mappingList = section.createEl('div', { cls: 'mapping-list' });
+
+    const instanceMappings = this.plugin.settings.mappings.filter(m => m.type === 'instance');
+
+    if (instanceMappings.length === 0) {
+      mappingList.createEl('p', {
+        text: 'No folder mappings configured. Add an instance mapping to get started.',
+        cls: 'setting-item-description',
+      });
+    } else {
+      this.renderMappingTree(mappingList, instanceMappings);
+    }
+  }
+
+  private renderMappingTree(container: HTMLElement, instanceMappings: FolderMapping[]): void {
+    const projectMappings = this.plugin.settings.mappings.filter(m => m.type === 'project');
+
+    for (const instanceMapping of instanceMappings) {
+      const instance = this.plugin.settings.instances.find(i => i.id === instanceMapping.instanceId);
+      const instanceName = instance?.name || 'Unknown Instance';
+
+      const treeItem = container.createEl('div', { cls: 'mapping-tree-item' });
+
+      this.renderMappingCard(treeItem, instanceMapping, instanceName, 'instance');
+
+      const childMappings = projectMappings.filter(pm => pm.folderPath.startsWith(instanceMapping.folderPath));
+
+      if (childMappings.length > 0) {
+        const childContainer = treeItem.createEl('div', { cls: 'mapping-children' });
+        for (const childMapping of childMappings) {
+          this.renderMappingCard(childContainer, childMapping, childMapping.projectKey || 'Unknown', 'project');
+        }
+      }
+    }
+  }
+
+  private renderMappingCard(container: HTMLElement, mapping: FolderMapping, targetName: string, type: MappingType): void {
+    const card = container.createEl('div', { cls: `mapping-card mapping-${type}` });
+
+    const header = card.createEl('div', { cls: 'mapping-header' });
+
+    const titleContainer = header.createEl('div', { cls: 'mapping-title-container' });
+
+    titleContainer.createEl('span', { text: mapping.folderPath || '/', cls: 'mapping-folder' });
+    titleContainer.createEl('span', { text: '→', cls: 'mapping-arrow' });
+    titleContainer.createEl('span', { text: targetName, cls: 'mapping-target' });
+
+    const badge = type === 'instance' ? 'Instance' : 'Project';
+    titleContainer.createEl('span', { text: badge, cls: `mapping-badge mapping-badge-${type}` });
+
+    const actions = header.createEl('div', { cls: 'mapping-actions' });
+
+    if (type === 'instance' && mapping.instanceId) {
+      const addProjectButton = actions.createEl('button', {
+        text: 'Add Project',
+        cls: 'mapping-action-btn',
+        attr: { 'aria-label': 'Add project mapping' },
+      });
+      addProjectButton.addEventListener('click', async () => {
+        await this.handleAddMapping('project', mapping.instanceId, mapping.folderPath);
+      });
+    }
+
+    const editButton = actions.createEl('button', {
+      text: 'Edit',
+      cls: 'mapping-action-btn',
+      attr: { 'aria-label': 'Edit mapping' },
+    });
+    editButton.addEventListener('click', async () => {
+      await this.handleEditMapping(mapping);
+    });
+
+    const removeButton = actions.createEl('button', {
+      text: 'Remove',
+      cls: 'mapping-action-btn mod-warning',
+      attr: { 'aria-label': 'Remove mapping' },
+    });
+    removeButton.addEventListener('click', async () => {
+      await this.handleRemoveMapping(mapping);
+    });
+  }
+
+  private async handleAddMapping(mappingType: MappingType, instanceId?: string, baseFolderPath?: string): Promise<void> {
+    const modal = new FolderMappingModal(this.app, {
+      mode: 'add',
+      mappingType,
+      instances: this.plugin.settings.instances,
+      existingMappings: this.plugin.settings.mappings,
+      parentInstanceId: instanceId,
+      baseFolderPath,
+    });
+
+    const result = await modal.open();
+
+    if (result) {
+      this.plugin.settings.mappings.push(result);
+      await this.plugin.saveSettings();
+      this.display();
+    }
+  }
+
+  private async handleEditMapping(mapping: FolderMapping): Promise<void> {
+    const modal = new FolderMappingModal(this.app, {
+      mode: 'edit',
+      mappingType: mapping.type,
+      instances: this.plugin.settings.instances,
+      existingMappings: this.plugin.settings.mappings,
+      mapping,
+      parentInstanceId: mapping.type === 'project' ? this.findParentInstanceId(mapping.folderPath) : undefined,
+    });
+
+    const result = await modal.open();
+
+    if (result) {
+      const index = this.plugin.settings.mappings.findIndex(m => m.id === mapping.id);
+      if (index !== -1) {
+        this.plugin.settings.mappings[index] = result;
+        await this.plugin.saveSettings();
+        this.display();
+      }
+    }
+  }
+
+  private findParentInstanceId(folderPath: string): string | undefined {
+    const instanceMappings = this.plugin.settings.mappings.filter(m => m.type === 'instance');
+    for (const mapping of instanceMappings) {
+      if (folderPath.startsWith(mapping.folderPath)) {
+        return mapping.instanceId;
+      }
+    }
+    return undefined;
+  }
+
+  private async handleRemoveMapping(mapping: FolderMapping): Promise<void> {
+    let message = `Are you sure you want to remove the mapping for "${mapping.folderPath}"?`;
+
+    if (mapping.type === 'instance') {
+      const childMappings = this.plugin.settings.mappings.filter(m => m.type === 'project' && m.folderPath.startsWith(mapping.folderPath));
+      if (childMappings.length > 0) {
+        message = `This instance mapping has ${childMappings.length} project mapping(s). Removing it will also remove all project mappings. Continue?`;
+      }
+    }
+
+    const confirmed = confirm(message);
+    if (!confirmed) return;
+
+    if (mapping.type === 'instance') {
+      this.plugin.settings.mappings = this.plugin.settings.mappings.filter(
+        m => !(m.id === mapping.id || (m.type === 'project' && m.folderPath.startsWith(mapping.folderPath))),
+      );
+    } else {
+      this.plugin.settings.mappings = this.plugin.settings.mappings.filter(m => m.id !== mapping.id);
+    }
+
+    await this.plugin.saveSettings();
+    this.display();
   }
 }

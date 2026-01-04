@@ -1,5 +1,5 @@
 import { requestUrl, RequestUrlResponse } from 'obsidian';
-import type { JiraInstance } from '../types';
+import type { JiraInstance, JiraProject } from '../types';
 import type { TestConnectionResult, JiraUser } from './types';
 
 export class JiraClient {
@@ -50,6 +50,26 @@ export class JiraClient {
         error: this.parseError(error),
       };
     }
+  }
+
+  async getProjects(): Promise<JiraProject[]> {
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl('/rest/api/3/project'),
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`Failed to fetch projects: ${response.status}`);
+    }
+
+    return response.json.map((project: Record<string, unknown>) => ({
+      id: project.id as string,
+      key: project.key as string,
+      name: project.name as string,
+      issueTypes: [],
+      avatarUrl: (project.avatarUrls as Record<string, string>)?.['48x48'],
+    }));
   }
 
   private parseError(error: unknown): string {

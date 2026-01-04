@@ -152,3 +152,119 @@
 .instance-email {
   font-size: 0.8rem;
 }
+
+.folder-mappings-section {
+  margin-top: 2rem;
+}
+
+.mapping-list {
+  margin-top: 1rem;
+}
+
+.mapping-tree-item {
+  margin-bottom: 0.5rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.mapping-children {
+  margin-left: 1.5rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--background-modifier-border);
+}
+
+.mapping-card {
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-secondary);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &.mapping-instance {
+    border-left: 3px solid var(--interactive-accent);
+  }
+
+  &.mapping-project {
+    border-left: 3px solid var(--text-accent);
+  }
+}
+
+.mapping-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mapping-title-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.mapping-folder {
+  font-family: var(--font-monospace);
+  font-size: 0.9rem;
+  color: var(--text-normal);
+}
+
+.mapping-arrow {
+  color: var(--text-muted);
+}
+
+.mapping-target {
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.mapping-badge {
+  padding: 0.125rem 0.5rem;
+  font-size: 0.7rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+
+  &.mapping-badge-instance {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+  }
+
+  &.mapping-badge-project {
+    background: var(--text-accent);
+    color: var(--background-primary);
+  }
+}
+
+.mapping-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mapping-action-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background: var(--background-modifier-border);
+  color: var(--text-normal);
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: var(--background-modifier-border-hover);
+  }
+
+  &.mod-warning {
+    color: var(--text-error);
+
+    &:hover {
+      background: rgba(var(--color-red-rgb), 0.2);
+    }
+  }
+}

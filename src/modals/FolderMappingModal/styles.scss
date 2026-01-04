@@ -1,0 +1,108 @@
+.jira-bridge-folder-mapping-modal {
+  min-width: 400px;
+
+  .modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    label {
+      font-weight: 500;
+    }
+  }
+
+  .folder-input-container {
+    display: flex;
+    gap: 0.5rem;
+
+    .field-input {
+      flex: 1;
+    }
+
+    .browse-button {
+      flex-shrink: 0;
+    }
+  }
+
+  .field-input,
+  .field-select {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 14px;
+    box-sizing: border-box;
+
+    &:focus {
+      outline: none;
+      border-color: var(--interactive-accent);
+      box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  .field-select {
+    cursor: pointer;
+    padding: 0 0.5rem;
+  }
+
+  .field-value {
+    padding: 0.5rem;
+    background: var(--background-secondary);
+    border-radius: 4px;
+    color: var(--text-muted);
+  }
+
+  .field-error {
+    display: block;
+    min-height: 1.25rem;
+    font-size: 12px;
+    color: var(--text-error);
+    opacity: 0;
+    transition: opacity 0.15s ease-in-out;
+
+    &.visible {
+      opacity: 1;
+    }
+  }
+
+  .modal-button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    background: var(--background-modifier-border);
+    color: var(--text-normal);
+
+    &:hover:not(:disabled) {
+      background: var(--background-modifier-border-hover);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &.mod-cta {
+      background: var(--interactive-accent);
+      color: var(--text-on-accent);
+
+      &:hover:not(:disabled) {
+        background: var(--interactive-accent-hover);
+      }
+    }
+  }
+}

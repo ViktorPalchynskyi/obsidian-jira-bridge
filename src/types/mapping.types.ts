@@ -1,14 +1,14 @@
 import type { JiraInstance, JiraProject } from './jira.types';
 
+export type MappingType = 'instance' | 'project';
+
 export interface FolderMapping {
   id: string;
   folderPath: string;
-  instanceId: string;
-  projectKey: string;
-  defaultIssueType?: string;
+  type: MappingType;
+  instanceId?: string;
+  projectKey?: string;
   enabled: boolean;
-  priority: number;
-  pattern?: string;
 }
 
 export interface ResolvedMapping {

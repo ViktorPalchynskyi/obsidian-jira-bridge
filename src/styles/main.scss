@@ -2,4 +2,5 @@
 @use '../modals/JiraInstanceModal/styles.scss' as instanceModal;
 @use '../modals/CreateTicketModal/styles.scss' as createTicket;
 @use '../modals/StatusChangeModal/styles.scss' as statusChange;
+@use '../modals/FolderMappingModal/styles.scss' as folderMappingModal;
 @use '../settings/styles.scss' as settings;

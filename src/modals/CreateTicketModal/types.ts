@@ -1,4 +1,12 @@
-import type { JiraInstance, ResolvedContext, CustomFieldConfig } from '../../types';
+import type { JiraInstance, ResolvedContext, CustomFieldConfig, ProjectMappingConfig } from '../../types';
+
+export interface FrontmatterValues {
+  issueType?: string;
+  labels?: string[];
+  parentSummary?: string;
+  priority?: string;
+  customFields?: Record<string, unknown>;
+}
 
 export interface CreateTicketModalOptions {
   instances: JiraInstance[];
@@ -7,6 +15,8 @@ export interface CreateTicketModalOptions {
   initialDescription?: string;
   filePath?: string;
   customFields?: CustomFieldConfig[];
+  frontmatterValues?: FrontmatterValues;
+  projectConfig?: ProjectMappingConfig;
 }
 
 export interface CreateTicketResult {

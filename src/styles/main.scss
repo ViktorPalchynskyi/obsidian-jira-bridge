@@ -4,5 +4,6 @@
 @use '../modals/StatusChangeModal/styles.scss' as statusChange;
 @use '../modals/FolderMappingModal/styles.scss' as folderMappingModal;
 @use '../modals/CustomFieldsModal/styles.scss' as customFieldsModal;
+@use '../modals/FrontmatterMappingModal/styles.scss' as frontmatterMappingModal;
 @use '../settings/styles.scss' as settings;
 @use './statusbar.scss' as statusbar;

@@ -10,3 +10,5 @@ export { FolderMappingModal } from './FolderMappingModal/FolderMappingModal';
 export type { FolderMappingModalOptions } from './FolderMappingModal/types';
 export { CustomFieldsModal } from './CustomFieldsModal/CustomFieldsModal';
 export type { CustomFieldsModalOptions, CustomFieldsModalResult } from './CustomFieldsModal/types';
+export { FrontmatterMappingModal } from './FrontmatterMappingModal/FrontmatterMappingModal';
+export type { FrontmatterMappingModalOptions, FrontmatterMappingModalResult } from './FrontmatterMappingModal/types';

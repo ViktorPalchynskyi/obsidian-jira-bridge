@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import type { JiraBridgePlugin } from '../core/Plugin';
 import type { JiraInstance, FolderMapping, MappingType } from '../types';
-import { JiraInstanceModal, FolderMappingModal, CustomFieldsModal } from '../modals';
+import { JiraInstanceModal, FolderMappingModal, CustomFieldsModal, FrontmatterMappingModal } from '../modals';
 import { JiraClient } from '../api';
 
 export class JiraBridgeSettingsTab extends PluginSettingTab {
@@ -286,6 +286,15 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
     }
 
     if (type === 'project' && mapping.projectKey && parentInstanceId) {
+      const mappingButton = actions.createEl('button', {
+        text: 'Mapping',
+        cls: 'mapping-action-btn',
+        attr: { 'aria-label': 'Configure frontmatter mapping' },
+      });
+      mappingButton.addEventListener('click', async () => {
+        await this.handleConfigureMapping(mapping, parentInstanceId);
+      });
+
       const customFieldsEnabled = this.plugin.settings.ui.enableCustomFields;
       const fieldsButton = actions.createEl('button', {
         text: 'Fields',
@@ -410,6 +419,33 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
     if (result) {
       this.plugin.settings.createTicket.customFields = result.customFields;
       await this.plugin.saveSettings();
+    }
+  }
+
+  private async handleConfigureMapping(mapping: FolderMapping, instanceId: string): Promise<void> {
+    if (!mapping.projectKey) return;
+
+    const instance = this.plugin.settings.instances.find(i => i.id === instanceId);
+    if (!instance) return;
+
+    const customFields = this.plugin.settings.createTicket.customFields.filter(
+      cf => cf.enabled && (!cf.instanceId || cf.instanceId === instanceId) && (!cf.projectKey || cf.projectKey === mapping.projectKey),
+    );
+
+    const modal = new FrontmatterMappingModal(this.app, {
+      mapping,
+      instance,
+      customFields,
+    });
+
+    const result = await modal.open();
+
+    if (result) {
+      const mappingIndex = this.plugin.settings.mappings.findIndex(m => m.id === mapping.id);
+      if (mappingIndex !== -1) {
+        this.plugin.settings.mappings[mappingIndex].projectConfig = result.projectConfig;
+        await this.plugin.saveSettings();
+      }
     }
   }
 

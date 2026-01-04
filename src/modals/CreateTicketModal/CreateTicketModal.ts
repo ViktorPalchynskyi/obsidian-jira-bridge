@@ -299,16 +299,32 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
       return;
     }
 
-    this.issueTypeSelect.createEl('option', {
+    const frontmatterIssueType = this.options.frontmatterValues?.issueType?.toLowerCase();
+    let matchedTypeId = '';
+
+    const defaultOption = this.issueTypeSelect.createEl('option', {
       text: 'Select issue type...',
       attr: { value: '', disabled: 'true', selected: 'true' },
     });
 
     for (const type of this.state.issueTypes) {
-      this.issueTypeSelect.createEl('option', {
+      const option = this.issueTypeSelect.createEl('option', {
         text: type.name,
         attr: { value: type.id },
       });
+
+      if (frontmatterIssueType && type.name.toLowerCase() === frontmatterIssueType) {
+        option.selected = true;
+        defaultOption.selected = false;
+        matchedTypeId = type.id;
+      }
+    }
+
+    if (matchedTypeId) {
+      this.state.issueTypeId = matchedTypeId;
+      if (this.hasCustomFields()) {
+        this.loadCustomFieldsMeta();
+      }
     }
 
     this.updateSubmitButtonState();
@@ -339,16 +355,24 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
 
     this.prioritySelect.innerHTML = '';
 
-    this.prioritySelect.createEl('option', {
+    const frontmatterPriority = this.options.frontmatterValues?.priority?.toLowerCase();
+
+    const defaultOption = this.prioritySelect.createEl('option', {
       text: 'Default priority',
       attr: { value: '' },
     });
 
     for (const priority of priorities) {
-      this.prioritySelect.createEl('option', {
+      const option = this.prioritySelect.createEl('option', {
         text: priority.name,
         attr: { value: priority.id },
       });
+
+      if (frontmatterPriority && priority.name.toLowerCase() === frontmatterPriority) {
+        option.selected = true;
+        defaultOption.selected = false;
+        this.state.priorityId = priority.id;
+      }
     }
   }
 
@@ -433,12 +457,50 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
       const allFields = await this.client.getFieldsForIssueType(this.state.projectKey, this.state.issueTypeId);
       const configuredFieldIds = this.options.customFields!.map(cf => cf.fieldId);
       this.state.customFieldsMeta = allFields.filter(f => configuredFieldIds.includes(f.fieldId));
+      this.applyFrontmatterCustomFields();
       this.renderCustomFields();
     } catch {
       this.customFieldsContainer.innerHTML = '';
       this.customFieldsContainer.createEl('p', { text: 'Failed to load custom fields', cls: 'error-text' });
     } finally {
       this.state.isLoadingCustomFields = false;
+    }
+  }
+
+  private applyFrontmatterCustomFields(): void {
+    const fmCustomFields = this.options.frontmatterValues?.customFields;
+    if (!fmCustomFields) return;
+
+    for (const fieldMeta of this.state.customFieldsMeta) {
+      const fmValue = fmCustomFields[fieldMeta.fieldId];
+      if (fmValue === undefined) continue;
+
+      const schemaType = fieldMeta.schema?.type || 'string';
+      const systemField = fieldMeta.schema?.system;
+
+      if (fieldMeta.allowedValues && fieldMeta.allowedValues.length > 0) {
+        const match = fieldMeta.allowedValues.find(
+          av => av.name?.toLowerCase() === String(fmValue).toLowerCase() || av.id === String(fmValue),
+        );
+        if (match) {
+          this.state.customFieldValues[fieldMeta.fieldId] = { id: match.id };
+        }
+      } else if (schemaType === 'user' || systemField === 'assignee') {
+        this.state.customFieldValues[fieldMeta.fieldId] = { displayName: String(fmValue) };
+      } else if (schemaType === 'number') {
+        const num = typeof fmValue === 'number' ? fmValue : parseFloat(String(fmValue));
+        if (!isNaN(num)) {
+          this.state.customFieldValues[fieldMeta.fieldId] = num;
+        }
+      } else if (schemaType === 'array') {
+        if (Array.isArray(fmValue)) {
+          this.state.customFieldValues[fieldMeta.fieldId] = fmValue.map(String);
+        } else {
+          this.state.customFieldValues[fieldMeta.fieldId] = [String(fmValue)];
+        }
+      } else if (schemaType === 'string') {
+        this.state.customFieldValues[fieldMeta.fieldId] = String(fmValue);
+      }
     }
   }
 
@@ -487,11 +549,17 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     const select = fieldGroup.createEl('select', { cls: 'field-select' });
     select.createEl('option', { text: `Select ${field.name}...`, attr: { value: '' } });
 
+    const prefilledValue = this.state.customFieldValues[field.fieldId] as { id?: string } | undefined;
+    const prefilledId = prefilledValue?.id;
+
     for (const option of field.allowedValues!) {
-      select.createEl('option', {
+      const opt = select.createEl('option', {
         text: option.name || option.value || option.id,
         attr: { value: option.id },
       });
+      if (prefilledId && option.id === prefilledId) {
+        opt.selected = true;
+      }
     }
 
     select.addEventListener('change', () => {
@@ -507,16 +575,30 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     const select = fieldGroup.createEl('select', { cls: 'field-select' });
     select.createEl('option', { text: 'Loading users...', attr: { value: '', disabled: 'true' } });
 
+    const prefilledValue = this.state.customFieldValues[field.fieldId] as { displayName?: string; accountId?: string } | undefined;
+    const prefilledName = prefilledValue?.displayName?.toLowerCase();
+
     try {
       const users = await this.client!.getAssignableUsers(this.state.projectKey);
       select.innerHTML = '';
       select.createEl('option', { text: `Select ${field.name}...`, attr: { value: '' } });
 
+      let matchedAccountId: string | null = null;
+
       for (const user of users) {
-        select.createEl('option', {
+        const opt = select.createEl('option', {
           text: user.displayName,
           attr: { value: user.accountId },
         });
+
+        if (prefilledName && user.displayName.toLowerCase() === prefilledName) {
+          opt.selected = true;
+          matchedAccountId = user.accountId;
+        }
+      }
+
+      if (matchedAccountId) {
+        this.state.customFieldValues[field.fieldId] = { accountId: matchedAccountId };
       }
     } catch {
       select.innerHTML = '';
@@ -551,20 +633,38 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     }
 
     try {
-      const allIssues = await this.client!.getParentableIssues(this.state.projectKey);
+      let allIssues = await this.client!.getParentableIssues(this.state.projectKey);
+
+      const parentSummary = this.options.frontmatterValues?.parentSummary;
+      if (parentSummary) {
+        const searchResults = await this.client!.searchIssuesBySummary(this.state.projectKey, parentSummary, 5);
+        const newIssues = searchResults.filter(sr => !allIssues.some(ai => ai.key === sr.key));
+        allIssues = [...newIssues, ...allIssues];
+      }
+
       const filteredIssues = allIssues.filter(issue => allowedParentTypes.includes(issue.issueType.toLowerCase()));
 
       select.innerHTML = '';
-      select.createEl('option', { text: `Select ${field.name}...`, attr: { value: '' } });
+      const defaultOption = select.createEl('option', { text: `Select ${field.name}...`, attr: { value: '' } });
 
       if (filteredIssues.length === 0) {
         select.createEl('option', { text: 'No parent issues found', attr: { value: '', disabled: 'true' } });
       } else {
+        let matchedKey = '';
         for (const issue of filteredIssues) {
-          select.createEl('option', {
+          const option = select.createEl('option', {
             text: `[${issue.issueType}] ${issue.key} - ${issue.summary}`,
             attr: { value: issue.key },
           });
+
+          if (parentSummary && issue.summary.toLowerCase().includes(parentSummary.toLowerCase())) {
+            if (!matchedKey) {
+              option.selected = true;
+              defaultOption.selected = false;
+              matchedKey = issue.key;
+              this.state.customFieldValues[field.fieldId] = { key: issue.key };
+            }
+          }
         }
       }
     } catch {
@@ -582,7 +682,7 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
   }
 
   private async createLabelsField(fieldGroup: HTMLElement, field: JiraFieldMeta): Promise<void> {
-    const selectedLabels: string[] = [];
+    const selectedLabels: string[] = this.options.frontmatterValues?.labels ? [...this.options.frontmatterValues.labels] : [];
     let allLabels: string[] = [];
 
     const chipsContainer = fieldGroup.createEl('div', { cls: 'chips-container' });
@@ -645,6 +745,10 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     try {
       allLabels = await this.client!.getLabels();
       updateSelect();
+      if (selectedLabels.length > 0) {
+        updateChips();
+        updateState();
+      }
     } catch {
       select.innerHTML = '';
       select.createEl('option', { text: 'Failed to load labels', attr: { value: '', disabled: 'true' } });
@@ -668,6 +772,11 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
       attr: { placeholder: `Enter ${field.name}...`, step: 'any' },
     });
 
+    const prefilledValue = this.state.customFieldValues[field.fieldId];
+    if (typeof prefilledValue === 'number') {
+      input.value = String(prefilledValue);
+    }
+
     input.addEventListener('input', () => {
       if (input.value) {
         this.state.customFieldValues[field.fieldId] = parseFloat(input.value);
@@ -683,6 +792,11 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
       cls: 'field-input',
       attr: { placeholder: `Enter ${field.name}...` },
     });
+
+    const prefilledValue = this.state.customFieldValues[field.fieldId];
+    if (typeof prefilledValue === 'string') {
+      input.value = prefilledValue;
+    }
 
     input.addEventListener('input', () => {
       if (input.value.trim()) {

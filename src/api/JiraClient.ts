@@ -194,6 +194,37 @@ export class JiraClient {
     });
   }
 
+  async searchIssuesBySummary(
+    projectKey: string,
+    summaryText: string,
+    maxResults: number = 10,
+  ): Promise<{ key: string; summary: string; issueType: string }[]> {
+    const escapedSummary = summaryText.replace(/"/g, '\\"');
+    const jql = `project=${projectKey} AND summary ~ "${escapedSummary}" AND statusCategory != Done ORDER BY created DESC`;
+    const url =
+      this.buildUrl('/rest/api/3/search/jql') + `?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&fields=summary,issuetype`;
+
+    const response: RequestUrlResponse = await requestUrl({
+      url,
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`Failed to search issues: ${response.status}`);
+    }
+
+    return response.json.issues.map((issue: Record<string, unknown>) => {
+      const fields = issue.fields as Record<string, unknown>;
+      const issueType = fields.issuetype as Record<string, unknown>;
+      return {
+        key: issue.key as string,
+        summary: fields.summary as string,
+        issueType: issueType.name as string,
+      };
+    });
+  }
+
   async createIssue(
     projectKey: string,
     issueTypeId: string,

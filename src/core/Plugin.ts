@@ -1,9 +1,10 @@
-import { Plugin, MarkdownView } from 'obsidian';
-import type { PluginSettings, ServiceToken } from '../types';
+import { Plugin, MarkdownView, TFile } from 'obsidian';
+import type { PluginSettings, ServiceToken, ProjectMappingConfig, FrontmatterFieldMapping } from '../types';
+import type { FrontmatterValues } from '../modals/CreateTicketModal/types';
 import { ServiceContainer } from './ServiceContainer';
 import { EventBus } from './EventBus';
 import { JiraBridgeSettingsTab } from '../settings';
-import { DEFAULT_SETTINGS } from '../constants/defaults';
+import { DEFAULT_SETTINGS, DEFAULT_CONTENT_PARSING } from '../constants/defaults';
 import { MappingResolver } from '../mapping';
 import { StatusBarManager } from '../ui';
 import { CreateTicketModal } from '../modals';
@@ -87,29 +88,34 @@ export class JiraBridgePlugin extends Plugin {
     const filePath = activeFile?.path || null;
     const context = this.mappingResolver.resolve(filePath || '');
 
+    const projectConfig = context.projectMapping?.projectConfig;
+    const contentParsing = projectConfig?.contentParsing || DEFAULT_CONTENT_PARSING;
+
     let initialSummary = activeFile?.basename || '';
     let initialDescription = '';
+    let selectedText = '';
 
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (activeView) {
       const editor = activeView.editor;
       const content = editor.getValue();
+      selectedText = editor.getSelection();
 
-      const parsedSummary = parseSummaryFromContent(content);
+      const parsedSummary = parseSummaryFromContent(content, contentParsing.summaryPattern, contentParsing.summaryFlags);
       if (parsedSummary) {
         initialSummary = parsedSummary;
       }
 
-      const parsedDescription = parseDescriptionFromContent(content);
-      if (parsedDescription) {
+      const parsedDescription = parseDescriptionFromContent(content, contentParsing.descriptionPattern, contentParsing.descriptionFlags);
+
+      if (selectedText) {
+        initialDescription = selectedText;
+      } else if (parsedDescription) {
         initialDescription = parsedDescription;
-      } else {
-        const selection = editor.getSelection();
-        if (selection) {
-          initialDescription = selection;
-        }
       }
     }
+
+    const frontmatterValues = this.extractFrontmatterValues(activeFile, projectConfig);
 
     const instanceId = context.instance?.id;
     const projectKey = context.projectKey;
@@ -126,9 +132,70 @@ export class JiraBridgePlugin extends Plugin {
       initialDescription,
       filePath: filePath || undefined,
       customFields,
+      frontmatterValues,
+      projectConfig,
     });
 
     modal.open();
+  }
+
+  private extractFrontmatterValues(file: TFile | null, projectConfig?: ProjectMappingConfig): FrontmatterValues {
+    const values: FrontmatterValues = {};
+
+    if (!file || !projectConfig || projectConfig.frontmatterMappings.length === 0) {
+      return values;
+    }
+
+    const metadata = this.app.metadataCache.getFileCache(file);
+    const frontmatter = metadata?.frontmatter;
+
+    if (!frontmatter) {
+      return values;
+    }
+
+    for (const mapping of projectConfig.frontmatterMappings) {
+      const fmValue = frontmatter[mapping.frontmatterKey];
+      if (fmValue === undefined || fmValue === null) continue;
+
+      this.applyFrontmatterMapping(values, mapping, fmValue);
+    }
+
+    return values;
+  }
+
+  private applyFrontmatterMapping(values: FrontmatterValues, mapping: FrontmatterFieldMapping, fmValue: unknown): void {
+    switch (mapping.jiraFieldType) {
+      case 'issue_type':
+        if (typeof fmValue === 'string') {
+          values.issueType = fmValue;
+        }
+        break;
+      case 'labels':
+        if (Array.isArray(fmValue)) {
+          values.labels = fmValue.map(String);
+        } else if (typeof fmValue === 'string') {
+          values.labels = [fmValue];
+        }
+        break;
+      case 'parent':
+        if (typeof fmValue === 'string') {
+          values.parentSummary = fmValue;
+        }
+        break;
+      case 'priority':
+        if (typeof fmValue === 'string') {
+          values.priority = fmValue;
+        }
+        break;
+      case 'custom':
+        if (mapping.customFieldId) {
+          if (!values.customFields) {
+            values.customFields = {};
+          }
+          values.customFields[mapping.customFieldId] = fmValue;
+        }
+        break;
+    }
   }
 
   private setupEventListeners(): void {

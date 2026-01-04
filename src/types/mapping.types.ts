@@ -2,6 +2,28 @@ import type { JiraInstance, JiraProject } from './jira.types';
 
 export type MappingType = 'instance' | 'project';
 
+export type BuiltInFieldType = 'issue_type' | 'labels' | 'parent' | 'priority';
+export type FrontmatterFieldType = BuiltInFieldType | 'custom';
+
+export interface FrontmatterFieldMapping {
+  frontmatterKey: string;
+  jiraFieldType: FrontmatterFieldType;
+  customFieldId?: string;
+  customFieldName?: string;
+}
+
+export interface ContentParsingConfig {
+  summaryPattern: string;
+  summaryFlags: string;
+  descriptionPattern: string;
+  descriptionFlags: string;
+}
+
+export interface ProjectMappingConfig {
+  frontmatterMappings: FrontmatterFieldMapping[];
+  contentParsing: ContentParsingConfig;
+}
+
 export interface FolderMapping {
   id: string;
   folderPath: string;
@@ -9,6 +31,7 @@ export interface FolderMapping {
   instanceId?: string;
   projectKey?: string;
   enabled: boolean;
+  projectConfig?: ProjectMappingConfig;
 }
 
 export interface ResolvedMapping {

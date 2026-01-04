@@ -1,13 +1,34 @@
-export function parseSummaryFromContent(content: string): string | null {
-  const summaryRegex = /^## Summary\s*\n+```\s*\n(.+?)\n```/m;
-  const match = content.match(summaryRegex);
-  if (match && match[1]) {
-    return match[1].trim();
+const DEFAULT_SUMMARY_PATTERN = '^## Summary\\s*\\n+```\\s*\\n(.+?)\\n```';
+const DEFAULT_SUMMARY_FLAGS = 'm';
+const DEFAULT_DESCRIPTION_PATTERN = '^## Description[\\s\\t]*$';
+const DEFAULT_DESCRIPTION_FLAGS = 'm';
+
+export function parseSummaryFromContent(content: string, pattern?: string, flags?: string): string | null {
+  try {
+    const regex = new RegExp(pattern || DEFAULT_SUMMARY_PATTERN, flags || DEFAULT_SUMMARY_FLAGS);
+    const match = content.match(regex);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  } catch {
+    // Invalid regex, fall back to default
+    const defaultRegex = new RegExp(DEFAULT_SUMMARY_PATTERN, DEFAULT_SUMMARY_FLAGS);
+    const match = content.match(defaultRegex);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
   }
   return null;
 }
 
-export function parseDescriptionFromContent(content: string): string | null {
+export function parseDescriptionFromContent(content: string, pattern?: string, flags?: string): string | null {
+  let headerPattern: RegExp;
+  try {
+    headerPattern = new RegExp(pattern || DEFAULT_DESCRIPTION_PATTERN, flags || DEFAULT_DESCRIPTION_FLAGS);
+  } catch {
+    headerPattern = new RegExp(DEFAULT_DESCRIPTION_PATTERN, DEFAULT_DESCRIPTION_FLAGS);
+  }
+
   const lines = content.split('\n');
   let startIndex = -1;
   let endIndex = lines.length;
@@ -15,7 +36,7 @@ export function parseDescriptionFromContent(content: string): string | null {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    if (startIndex === -1 && /^## Description[\s\t]*$/.test(line)) {
+    if (startIndex === -1 && headerPattern.test(line)) {
       startIndex = i + 1;
       continue;
     }

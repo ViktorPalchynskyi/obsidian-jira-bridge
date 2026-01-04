@@ -1,0 +1,219 @@
+.jira-bridge-frontmatter-modal {
+  min-width: 550px;
+  max-height: 80vh;
+  overflow-y: auto;
+
+  .modal-subtitle {
+    margin: 0 0 1.5rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+
+  .mapping-section,
+  .parsing-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--background-modifier-border);
+
+    h3 {
+      margin: 0 0 0.5rem;
+      font-size: 1rem;
+    }
+
+    .section-description {
+      margin: 0 0 1rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+  }
+
+  .mappings-list {
+    margin-bottom: 1rem;
+
+    .empty-text {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin: 0;
+    }
+  }
+
+  .mapping-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-secondary);
+  }
+
+  .mapping-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+
+    .frontmatter-key {
+      font-family: var(--font-monospace);
+      font-weight: 500;
+      color: var(--text-accent);
+    }
+
+    .mapping-arrow {
+      color: var(--text-muted);
+    }
+
+    .jira-field {
+      font-weight: 500;
+    }
+
+    .custom-field-id {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: var(--font-monospace);
+    }
+  }
+
+  .mapping-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .mapping-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+
+    &:hover {
+      background: var(--interactive-accent-hover);
+    }
+
+    &.mod-warning {
+      background: transparent;
+      color: var(--text-error);
+
+      &:hover {
+        background: rgba(255, 82, 82, 0.2);
+      }
+    }
+  }
+
+  .mapping-form-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+
+  .mapping-form {
+    background: var(--background-primary);
+    padding: 1.5rem;
+    border-radius: 8px;
+    min-width: 350px;
+    max-width: 450px;
+
+    h4 {
+      margin: 0 0 1rem;
+    }
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+
+    label {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    &.inline {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      label {
+        margin-bottom: 0;
+        white-space: nowrap;
+      }
+    }
+  }
+
+  .form-input,
+  .form-select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+
+    &.mono {
+      font-family: var(--font-monospace);
+      font-size: 0.85rem;
+    }
+
+    &.small {
+      width: 60px;
+    }
+  }
+
+  .form-select {
+    padding: 0.375rem 0.5rem;
+  }
+
+  .form-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .form-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background: var(--background-modifier-border);
+    color: var(--text-normal);
+
+    &:hover {
+      background: var(--background-modifier-border-hover);
+    }
+
+    &.mod-cta {
+      background: var(--interactive-accent);
+      color: var(--text-on-accent);
+
+      &:hover {
+        background: var(--interactive-accent-hover);
+      }
+    }
+  }
+
+  .reset-btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background: var(--background-modifier-border);
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+
+    &:hover {
+      background: var(--background-modifier-border-hover);
+    }
+  }
+}

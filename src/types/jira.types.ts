@@ -120,3 +120,28 @@ export interface CreateIssueResponse {
   key: string;
   self: string;
 }
+
+export interface JiraBoard {
+  id: string;
+  name: string;
+  type: 'scrum' | 'kanban' | 'simple';
+  location: {
+    projectId?: number;
+    projectKey?: string;
+    projectName?: string;
+  };
+}
+
+export interface JiraSprint {
+  id: number;
+  name: string;
+  state: 'active' | 'future' | 'closed';
+  startDate?: string;
+  endDate?: string;
+  goal?: string;
+}
+
+export interface JiraSprintInfo {
+  sprint: JiraSprint | null;
+  inBacklog: boolean;
+}

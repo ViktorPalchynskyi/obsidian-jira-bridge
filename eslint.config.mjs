@@ -33,6 +33,7 @@ export default [
         crypto: 'readonly',
         btoa: 'readonly',
         setTimeout: 'readonly',
+        clearTimeout: 'readonly',
         navigator: 'readonly',
         open: 'readonly',
         createFragment: 'readonly',

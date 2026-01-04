@@ -1,8 +1,9 @@
 import { App, Notice } from 'obsidian';
 import { BaseModal } from '../base/BaseModal';
 import type { StatusChangeResult, StatusChangeModalOptions } from './types';
-import type { JiraTransition, JiraStatus } from '../../types';
+import type { JiraTransition, JiraStatus, JiraSprint, JiraBoard } from '../../types';
 import { JiraClient } from '../../api/JiraClient';
+import { debounce, type DebouncedFunction } from '../../utils';
 
 interface ModalState {
   issueKey: string;
@@ -10,16 +11,24 @@ interface ModalState {
   isLoadingIssue: boolean;
   isLoadingTransitions: boolean;
   isSubmitting: boolean;
+  isSearching: boolean;
+  isLoadingSprint: boolean;
   currentStatus: JiraStatus | null;
   issueSummary: string;
   transitions: JiraTransition[];
   selectedTransitionId: string | null;
   error: string | null;
+  searchResults: { key: string; summary: string }[];
+  sprint: JiraSprint | null;
+  inBacklog: boolean;
+  board: JiraBoard | null;
+  availableSprints: JiraSprint[];
 }
 
 export class StatusChangeModal extends BaseModal<StatusChangeResult> {
   private state: ModalState;
   private client: JiraClient | null = null;
+  private debouncedSearch: DebouncedFunction<() => Promise<void>>;
 
   private issueKeyInput: HTMLInputElement | null = null;
   private instanceSelect: HTMLSelectElement | null = null;
@@ -34,16 +43,23 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
   ) {
     super(app);
     this.state = {
-      issueKey: '',
+      issueKey: options.initialIssueKey || '',
       instanceId: options.defaultInstanceId || options.instances[0]?.id || '',
       isLoadingIssue: false,
       isLoadingTransitions: false,
       isSubmitting: false,
+      isSearching: false,
+      isLoadingSprint: false,
       currentStatus: null,
       issueSummary: '',
       transitions: [],
       selectedTransitionId: null,
       error: null,
+      searchResults: [],
+      sprint: null,
+      inBacklog: true,
+      board: null,
+      availableSprints: [],
     };
 
     if (this.state.instanceId) {
@@ -52,6 +68,8 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
         this.client = new JiraClient(instance);
       }
     }
+
+    this.debouncedSearch = debounce(() => this.performSearch(), 300);
   }
 
   build(): void {
@@ -68,6 +86,11 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
     this.buildButtons(contentEl);
 
     this.setupKeyboardNavigation();
+
+    if (this.state.issueKey && this.issueKeyInput) {
+      this.issueKeyInput.value = this.state.issueKey;
+      this.loadIssue();
+    }
   }
 
   private buildInstanceSelector(container: HTMLElement): void {
@@ -142,12 +165,46 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
   private updateSuggestions(): void {
     if (!this.suggestionsContainer) return;
 
+    this.renderSuggestions();
+
+    if (this.state.issueKey.length >= 2) {
+      this.debouncedSearch();
+    } else {
+      this.debouncedSearch.cancel();
+      this.state.searchResults = [];
+      this.state.isSearching = false;
+    }
+  }
+
+  private async performSearch(): Promise<void> {
+    if (!this.client || this.state.issueKey.length < 2) return;
+
+    this.state.isSearching = true;
+    this.renderSuggestions();
+
+    try {
+      this.state.searchResults = await this.client.searchIssues(this.state.issueKey, 5);
+    } catch {
+      this.state.searchResults = [];
+    } finally {
+      this.state.isSearching = false;
+      this.renderSuggestions();
+    }
+  }
+
+  private renderSuggestions(): void {
+    if (!this.suggestionsContainer) return;
+
     const recentForInstance = this.options.recentIssues
       .filter(r => r.instanceId === this.state.instanceId)
-      .filter(r => !this.state.issueKey || r.key.includes(this.state.issueKey))
-      .slice(0, 5);
+      .filter(r => !this.state.issueKey || r.key.toLowerCase().includes(this.state.issueKey.toLowerCase()))
+      .slice(0, 3);
 
-    if (recentForInstance.length === 0) {
+    const searchResults = this.state.searchResults.filter(sr => !recentForInstance.some(r => r.key === sr.key));
+
+    const hasContent = recentForInstance.length > 0 || searchResults.length > 0 || this.state.isSearching;
+
+    if (!hasContent && !this.state.issueKey) {
       this.suggestionsContainer.style.display = 'none';
       return;
     }
@@ -155,20 +212,59 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
     this.suggestionsContainer.empty();
     this.suggestionsContainer.style.display = 'block';
 
-    for (const recent of recentForInstance) {
-      const item = this.suggestionsContainer.createDiv({ cls: 'suggestion-item' });
-      item.createSpan({ text: recent.key, cls: 'suggestion-key' });
-      item.createSpan({ text: recent.summary, cls: 'suggestion-summary' });
+    if (recentForInstance.length > 0) {
+      const recentLabel = this.suggestionsContainer.createDiv({ cls: 'suggestion-label', text: 'Recent' });
+      recentLabel.style.fontSize = '10px';
+      recentLabel.style.opacity = '0.6';
+      recentLabel.style.padding = '4px 8px';
 
-      item.addEventListener('click', () => {
-        this.state.issueKey = recent.key;
-        if (this.issueKeyInput) {
-          this.issueKeyInput.value = recent.key;
-        }
-        this.suggestionsContainer!.style.display = 'none';
-        this.loadIssue();
-      });
+      for (const recent of recentForInstance) {
+        this.createSuggestionItem(recent.key, recent.summary);
+      }
     }
+
+    if (searchResults.length > 0) {
+      if (recentForInstance.length > 0) {
+        const searchLabel = this.suggestionsContainer.createDiv({ cls: 'suggestion-label', text: 'Search Results' });
+        searchLabel.style.fontSize = '10px';
+        searchLabel.style.opacity = '0.6';
+        searchLabel.style.padding = '4px 8px';
+        searchLabel.style.borderTop = '1px solid var(--background-modifier-border)';
+      }
+
+      for (const result of searchResults) {
+        this.createSuggestionItem(result.key, result.summary);
+      }
+    }
+
+    if (this.state.isSearching) {
+      const loadingEl = this.suggestionsContainer.createDiv({ cls: 'suggestion-loading', text: 'Searching...' });
+      loadingEl.style.padding = '8px';
+      loadingEl.style.opacity = '0.6';
+      loadingEl.style.fontStyle = 'italic';
+    }
+
+    if (!hasContent && this.state.issueKey.length >= 2 && !this.state.isSearching) {
+      this.suggestionsContainer.style.display = 'none';
+    }
+  }
+
+  private createSuggestionItem(key: string, summary: string): void {
+    if (!this.suggestionsContainer) return;
+
+    const item = this.suggestionsContainer.createDiv({ cls: 'suggestion-item' });
+    item.createSpan({ text: key, cls: 'suggestion-key' });
+    item.createSpan({ text: summary, cls: 'suggestion-summary' });
+
+    item.addEventListener('click', () => {
+      this.state.issueKey = key;
+      if (this.issueKeyInput) {
+        this.issueKeyInput.value = key;
+      }
+      this.suggestionsContainer!.style.display = 'none';
+      this.debouncedSearch.cancel();
+      this.loadIssue();
+    });
   }
 
   private buildStatusSection(container: HTMLElement): void {
@@ -212,7 +308,7 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
         this.issueKeyInput.value = issue.key;
       }
 
-      await this.loadTransitions();
+      await Promise.all([this.loadTransitions(), this.loadSprintInfo()]);
     } catch (error) {
       this.state.error = error instanceof Error ? error.message : 'Failed to load issue';
       this.state.currentStatus = null;
@@ -221,6 +317,41 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
       this.state.isLoadingIssue = false;
       this.updateStatusDisplay();
       this.updateTransitionsDisplay();
+    }
+  }
+
+  private async loadSprintInfo(): Promise<void> {
+    if (!this.client || !this.state.issueKey) return;
+
+    this.state.isLoadingSprint = true;
+
+    try {
+      const sprintInfo = await this.client.getIssueSprintInfo(this.state.issueKey);
+      this.state.sprint = sprintInfo.sprint;
+      this.state.inBacklog = sprintInfo.inBacklog;
+
+      const projectKey = this.state.issueKey.split('-')[0];
+      const boards = await this.client.getBoardsForProject(projectKey);
+
+      const scrumBoard = boards.find(b => b.type === 'scrum');
+      const kanbanBoard = boards.find(b => b.type === 'kanban');
+      const simpleBoard = boards.find(b => b.type === 'simple');
+
+      this.state.board = scrumBoard || kanbanBoard || simpleBoard || boards[0] || null;
+
+      if (scrumBoard) {
+        this.state.availableSprints = await this.client.getSprintsForBoard(scrumBoard.id);
+      }
+
+      if (!this.state.sprint && this.state.board) {
+        this.state.inBacklog = await this.client.isIssueInBacklog(this.state.board.id, this.state.issueKey);
+      }
+    } catch {
+      this.state.sprint = null;
+      this.state.inBacklog = true;
+    } finally {
+      this.state.isLoadingSprint = false;
+      this.updateStatusDisplay();
     }
   }
 
@@ -280,6 +411,132 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
       cls: `status-badge status-${this.state.currentStatus.statusCategory.key}`,
     });
     statusBadge.dataset.category = this.state.currentStatus.statusCategory.key;
+
+    this.renderSprintSection();
+  }
+
+  private renderSprintSection(): void {
+    if (!this.statusContainer) return;
+
+    if (this.state.isLoadingSprint) {
+      const sprintEl = this.statusContainer.createDiv({ cls: 'sprint-section' });
+      sprintEl.createSpan({ text: 'Loading sprint info...', cls: 'loading-text' });
+      return;
+    }
+
+    if (!this.state.board) {
+      return;
+    }
+
+    const sprintEl = this.statusContainer.createDiv({ cls: 'sprint-section' });
+    const supportsBacklog = ['scrum', 'kanban', 'simple'].includes(this.state.board.type);
+
+    if (this.state.sprint) {
+      const sprintRow = sprintEl.createDiv({ cls: 'sprint-row' });
+      sprintRow.createSpan({ text: 'Sprint: ' });
+      const sprintBadge = sprintRow.createSpan({
+        text: `${this.state.sprint.name} (${this.state.sprint.state})`,
+        cls: `sprint-badge sprint-${this.state.sprint.state}`,
+      });
+      sprintBadge.dataset.state = this.state.sprint.state;
+
+      if (supportsBacklog) {
+        const backlogBtn = sprintRow.createEl('button', { text: '→ Backlog', cls: 'sprint-action-btn' });
+        backlogBtn.addEventListener('click', () => this.handleMoveToBacklog());
+      }
+    } else if (this.state.inBacklog) {
+      const backlogRow = sprintEl.createDiv({ cls: 'sprint-row' });
+
+      if (supportsBacklog) {
+        backlogRow.createSpan({ text: 'Location: ' });
+        backlogRow.createSpan({ text: 'Backlog', cls: 'backlog-badge' });
+
+        if (this.state.availableSprints.length > 0) {
+          const sprintBtn = backlogRow.createEl('button', { text: '→ Sprint', cls: 'sprint-action-btn' });
+          sprintBtn.addEventListener('click', () => this.showSprintPicker());
+        } else {
+          const boardBtn = backlogRow.createEl('button', { text: '→ Board', cls: 'sprint-action-btn' });
+          boardBtn.addEventListener('click', () => this.handleMoveToBoard());
+        }
+      } else {
+        backlogRow.createSpan({ text: 'Board: ' });
+        backlogRow.createSpan({
+          text: `${this.state.board.name} (${this.state.board.type})`,
+          cls: 'backlog-badge',
+        });
+      }
+    } else if (supportsBacklog) {
+      const boardRow = sprintEl.createDiv({ cls: 'sprint-row' });
+      boardRow.createSpan({ text: 'Location: ' });
+      boardRow.createSpan({ text: 'Board', cls: 'sprint-badge sprint-active' });
+
+      const backlogBtn = boardRow.createEl('button', { text: '→ Backlog', cls: 'sprint-action-btn' });
+      backlogBtn.addEventListener('click', () => this.handleMoveToBacklog());
+    }
+  }
+
+  private showSprintPicker(): void {
+    if (!this.statusContainer || this.state.availableSprints.length === 0) return;
+
+    const existingPicker = this.statusContainer.querySelector('.sprint-picker');
+    if (existingPicker) {
+      existingPicker.remove();
+      return;
+    }
+
+    const picker = this.statusContainer.createDiv({ cls: 'sprint-picker' });
+    picker.createEl('label', { text: 'Select Sprint:' });
+
+    for (const sprint of this.state.availableSprints) {
+      const item = picker.createDiv({ cls: 'sprint-picker-item' });
+      item.createSpan({ text: sprint.name });
+      item.createSpan({ text: ` (${sprint.state})`, cls: 'sprint-state' });
+
+      item.addEventListener('click', () => {
+        this.handleMoveToSprint(sprint.id);
+        picker.remove();
+      });
+    }
+  }
+
+  private async handleMoveToSprint(sprintId: number): Promise<void> {
+    if (!this.client) return;
+
+    try {
+      await this.client.moveToSprint([this.state.issueKey], sprintId);
+      const sprint = this.state.availableSprints.find(s => s.id === sprintId);
+      new Notice(`${this.state.issueKey} → ${sprint?.name || 'Sprint'}`, 3000);
+      await this.loadSprintInfo();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to move to sprint';
+      new Notice(`Error: ${message}`, 5000);
+    }
+  }
+
+  private async handleMoveToBacklog(): Promise<void> {
+    if (!this.client || !this.state.board) return;
+
+    try {
+      await this.client.moveToBacklog([this.state.issueKey], this.state.board.id);
+      new Notice(`${this.state.issueKey} → Backlog`, 3000);
+      await this.loadSprintInfo();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to move to backlog';
+      new Notice(`Error: ${message}`, 5000);
+    }
+  }
+
+  private async handleMoveToBoard(): Promise<void> {
+    if (!this.client || !this.state.board) return;
+
+    try {
+      await this.client.moveToBoard([this.state.issueKey], this.state.board.id);
+      new Notice(`${this.state.issueKey} → ${this.state.board.name}`, 3000);
+      await this.loadSprintInfo();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to move to board';
+      new Notice(`Error: ${message}`, 5000);
+    }
   }
 
   private updateTransitionsDisplay(): void {

@@ -200,4 +200,93 @@
     gap: 8px;
     margin-top: 20px;
   }
+
+  .sprint-section {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--background-modifier-border);
+  }
+
+  .sprint-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sprint-badge {
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+
+    &.sprint-active {
+      background: var(--color-blue);
+      color: white;
+    }
+
+    &.sprint-future {
+      background: var(--background-modifier-border);
+      color: var(--text-normal);
+    }
+
+    &.sprint-closed {
+      background: var(--color-green);
+      color: white;
+    }
+  }
+
+  .backlog-badge {
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--background-modifier-border);
+    color: var(--text-muted);
+  }
+
+  .sprint-action-btn {
+    margin-left: auto;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .sprint-picker {
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+
+    > label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      font-size: 13px;
+    }
+  }
+
+  .sprint-picker-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+
+    &:hover {
+      background: var(--background-modifier-hover);
+    }
+
+    .sprint-state {
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-left: 4px;
+    }
+  }
+
+  .loading-text {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 13px;
+  }
 }

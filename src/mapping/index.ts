@@ -1,1 +1,1 @@
-export {};
+export { MappingResolver } from './MappingResolver';

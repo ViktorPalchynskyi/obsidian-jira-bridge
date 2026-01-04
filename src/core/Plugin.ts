@@ -4,10 +4,14 @@ import { ServiceContainer } from './ServiceContainer';
 import { EventBus } from './EventBus';
 import { JiraBridgeSettingsTab } from '../settings';
 import { DEFAULT_SETTINGS } from '../constants/defaults';
+import { MappingResolver } from '../mapping';
+import { StatusBarManager } from '../ui';
 
 export class JiraBridgePlugin extends Plugin {
   private container!: ServiceContainer;
   private eventBus!: EventBus;
+  private mappingResolver!: MappingResolver;
+  private statusBar!: StatusBarManager;
   settings!: PluginSettings;
 
   async onload(): Promise<void> {
@@ -53,6 +57,12 @@ export class JiraBridgePlugin extends Plugin {
     this.addRibbonIcon('ticket', 'Jira Bridge', () => {
       this.openSettings();
     });
+
+    this.mappingResolver = new MappingResolver(this.settings);
+    this.statusBar = new StatusBarManager(this, this.mappingResolver, this.settings.ui, () => this.openSettings());
+
+    const activeFile = this.app.workspace.getActiveFile();
+    this.statusBar.update(activeFile?.path || null);
   }
 
   private registerCommands(): void {
@@ -66,11 +76,19 @@ export class JiraBridgePlugin extends Plugin {
   private setupEventListeners(): void {
     this.registerEvent(
       this.app.workspace.on('file-open', file => {
+        this.statusBar.update(file?.path || null);
         if (file) {
           this.eventBus.emit('file:opened', file);
         }
       }),
     );
+
+    this.eventBus.on('settings:changed', () => {
+      this.mappingResolver.updateSettings(this.settings);
+      this.statusBar.updateSettings(this.settings.ui);
+      const activeFile = this.app.workspace.getActiveFile();
+      this.statusBar.update(activeFile?.path || null);
+    });
   }
 
   private openSettings(): void {

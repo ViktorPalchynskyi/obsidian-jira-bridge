@@ -16,3 +16,10 @@ export interface ResolvedMapping {
   instance: JiraInstance;
   project?: JiraProject;
 }
+
+export interface ResolvedContext {
+  instance: JiraInstance | null;
+  instanceMapping: FolderMapping | null;
+  projectKey: string | null;
+  projectMapping: FolderMapping | null;
+}

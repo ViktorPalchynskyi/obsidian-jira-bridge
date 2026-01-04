@@ -15,7 +15,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   },
   ui: {
     showRibbonIcon: true,
-    showStatusBarItem: true,
+    showStatusBarInstance: true,
+    showStatusBarProject: true,
     defaultModalSize: 'medium',
   },
   advanced: {

@@ -22,6 +22,7 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
 
     this.toastContainer = containerEl.createEl('div', { cls: 'settings-toast-container' });
 
+    this.renderUISection(containerEl);
     this.renderInstancesSection(containerEl);
     this.renderMappingsSection(containerEl);
   }
@@ -371,5 +372,31 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
 
     await this.plugin.saveSettings();
     this.display();
+  }
+
+  private renderUISection(containerEl: HTMLElement): void {
+    const section = containerEl.createEl('div', { cls: 'ui-settings-section' });
+
+    new Setting(section).setName('Status Bar').setHeading();
+
+    new Setting(section)
+      .setName('Show Jira instance')
+      .setDesc('Display current Jira instance in the status bar')
+      .addToggle(toggle =>
+        toggle.setValue(this.plugin.settings.ui.showStatusBarInstance).onChange(async value => {
+          this.plugin.settings.ui.showStatusBarInstance = value;
+          await this.plugin.saveSettings();
+        }),
+      );
+
+    new Setting(section)
+      .setName('Show Jira project')
+      .setDesc('Display current Jira project in the status bar')
+      .addToggle(toggle =>
+        toggle.setValue(this.plugin.settings.ui.showStatusBarProject).onChange(async value => {
+          this.plugin.settings.ui.showStatusBarProject = value;
+          await this.plugin.saveSettings();
+        }),
+      );
   }
 }

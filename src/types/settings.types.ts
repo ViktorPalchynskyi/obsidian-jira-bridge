@@ -19,7 +19,8 @@ export interface SyncSettings {
 
 export interface UISettings {
   showRibbonIcon: boolean;
-  showStatusBarItem: boolean;
+  showStatusBarInstance: boolean;
+  showStatusBarProject: boolean;
   defaultModalSize: 'small' | 'medium' | 'large';
 }
 

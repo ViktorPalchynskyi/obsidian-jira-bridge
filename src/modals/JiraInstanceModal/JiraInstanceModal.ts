@@ -2,41 +2,35 @@ import { App, setIcon } from 'obsidian';
 import { BaseModal } from '../base/BaseModal';
 import type { JiraInstance } from '../../types';
 import { validateField, validateForm, generateInstanceId, type JiraInstanceFormData } from '../../utils/validation';
+import type { JiraInstanceModalOptions, FormElements, ErrorElements } from './types';
 
 const FIELD_HINTS: Partial<Record<keyof JiraInstanceFormData, string>> = {
   email: 'Your Atlassian account email used for API authentication',
   apiToken: 'Create at: id.atlassian.com → Security → API tokens',
 };
 
-interface FormElements {
-  name: HTMLInputElement;
-  baseUrl: HTMLInputElement;
-  email: HTMLInputElement;
-  apiToken: HTMLInputElement;
-}
-
-interface ErrorElements {
-  name: HTMLSpanElement;
-  baseUrl: HTMLSpanElement;
-  email: HTMLSpanElement;
-  apiToken: HTMLSpanElement;
-}
-
-export class AddJiraInstanceModal extends BaseModal<JiraInstance> {
+export class JiraInstanceModal extends BaseModal<JiraInstance> {
   private formElements: FormElements | null = null;
   private errorElements: ErrorElements | null = null;
   private submitButton: HTMLButtonElement | null = null;
   private fieldErrors: Partial<Record<keyof JiraInstanceFormData, string>> = {};
+  private options: JiraInstanceModalOptions;
 
-  constructor(app: App) {
+  constructor(app: App, options: JiraInstanceModalOptions = { mode: 'add' }) {
     super(app);
+    this.options = options;
   }
 
   build(): void {
     const { contentEl } = this;
-    contentEl.addClass('jira-bridge-modal', 'jira-bridge-add-instance');
+    const isEdit = this.options.mode === 'edit';
 
-    contentEl.createEl('h2', { text: 'Add Jira Instance', cls: 'modal-title' });
+    contentEl.addClass('jira-bridge-modal', 'jira-bridge-instance-modal');
+
+    contentEl.createEl('h2', {
+      text: isEdit ? 'Edit Jira Instance' : 'Add Jira Instance',
+      cls: 'modal-title',
+    });
 
     const form = contentEl.createEl('div', { cls: 'modal-form' });
 
@@ -46,6 +40,10 @@ export class AddJiraInstanceModal extends BaseModal<JiraInstance> {
       email: this.createField(form, 'email', 'Email', 'email', 'your-email@example.com'),
       apiToken: this.createField(form, 'apiToken', 'API Token', 'password', 'Your Jira API token'),
     };
+
+    if (isEdit && this.options.instance) {
+      this.prefillForm(this.options.instance);
+    }
 
     this.errorElements = {
       name: form.querySelector('[data-error="name"]') as HTMLSpanElement,
@@ -61,13 +59,22 @@ export class AddJiraInstanceModal extends BaseModal<JiraInstance> {
     });
 
     this.submitButton = buttonContainer.createEl('button', {
-      text: 'Add',
+      text: isEdit ? 'Save' : 'Add',
       cls: 'modal-button mod-cta',
     });
-    this.submitButton.disabled = true;
+    this.submitButton.disabled = !isEdit;
     this.submitButton.addEventListener('click', () => {
       this.handleSubmit();
     });
+  }
+
+  private prefillForm(instance: JiraInstance): void {
+    if (!this.formElements) return;
+
+    this.formElements.name.value = instance.name;
+    this.formElements.baseUrl.value = instance.baseUrl;
+    this.formElements.email.value = instance.email;
+    this.formElements.apiToken.value = instance.apiToken;
   }
 
   private createField(
@@ -181,15 +188,18 @@ export class AddJiraInstanceModal extends BaseModal<JiraInstance> {
       return;
     }
 
+    const isEdit = this.options.mode === 'edit' && this.options.instance;
+
     const instance: JiraInstance = {
-      id: generateInstanceId(),
+      id: isEdit ? this.options.instance!.id : generateInstanceId(),
       name: formData.name,
       baseUrl: formData.baseUrl.replace(/\/+$/, ''),
       email: formData.email,
       apiToken: formData.apiToken,
-      isDefault: false,
-      enabled: true,
-      createdAt: Date.now(),
+      isDefault: isEdit ? this.options.instance!.isDefault : false,
+      enabled: isEdit ? this.options.instance!.enabled : true,
+      createdAt: isEdit ? this.options.instance!.createdAt : Date.now(),
+      lastUsedAt: isEdit ? Date.now() : undefined,
     };
 
     this.submit(instance);

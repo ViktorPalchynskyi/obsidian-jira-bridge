@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import type { JiraBridgePlugin } from '../core/Plugin';
 import type { JiraInstance } from '../types';
-import { AddJiraInstanceModal } from '../modals';
+import { JiraInstanceModal } from '../modals';
 import { JiraClient } from '../api';
 
 export class JiraBridgeSettingsTab extends PluginSettingTab {
@@ -108,8 +108,8 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
       cls: 'instance-action-btn',
       attr: { 'aria-label': 'Edit instance' },
     });
-    editButton.addEventListener('click', () => {
-      // TODO: US-1.3 - implement edit instance
+    editButton.addEventListener('click', async () => {
+      await this.handleEditInstance(instance);
     });
 
     const removeButton = actions.createEl('button', {
@@ -127,7 +127,7 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
   }
 
   private async handleAddInstance(): Promise<void> {
-    const modal = new AddJiraInstanceModal(this.app);
+    const modal = new JiraInstanceModal(this.app, { mode: 'add' });
     const result = await modal.open();
 
     if (result) {
@@ -138,6 +138,20 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
       this.plugin.settings.instances.push(result);
       await this.plugin.saveSettings();
       this.display();
+    }
+  }
+
+  private async handleEditInstance(instance: JiraInstance): Promise<void> {
+    const modal = new JiraInstanceModal(this.app, { mode: 'edit', instance });
+    const result = await modal.open();
+
+    if (result) {
+      const index = this.plugin.settings.instances.findIndex(i => i.id === instance.id);
+      if (index !== -1) {
+        this.plugin.settings.instances[index] = result;
+        await this.plugin.saveSettings();
+        this.display();
+      }
     }
   }
 
@@ -153,7 +167,12 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
     const instance = this.plugin.settings.instances.find(i => i.id === instanceId);
     if (!instance) return;
 
-    const confirmed = confirm(`Are you sure you want to remove "${instance.name}"?`);
+    const isLastInstance = this.plugin.settings.instances.length === 1;
+    const message = isLastInstance
+      ? `"${instance.name}" is your only configured instance. Are you sure you want to remove it?`
+      : `Are you sure you want to remove "${instance.name}"?`;
+
+    const confirmed = confirm(message);
     if (!confirmed) return;
 
     const wasDefault = instance.isDefault;

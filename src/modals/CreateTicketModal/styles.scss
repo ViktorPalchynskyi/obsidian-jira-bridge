@@ -1,0 +1,14 @@
+.jira-bridge-create-ticket {
+  .description-field {
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+  }
+
+  .smart-defaults-hint {
+    font-size: 0.85em;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+  }
+}

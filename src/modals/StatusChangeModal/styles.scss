@@ -1,0 +1,25 @@
+.jira-bridge-status-change {
+  .current-status {
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+    background: var(--background-secondary);
+  }
+
+  .transition-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .transition-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    .transition-target {
+      color: var(--text-muted);
+      font-size: 0.9em;
+    }
+  }
+}

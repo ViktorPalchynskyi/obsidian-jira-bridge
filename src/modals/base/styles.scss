@@ -1,0 +1,35 @@
+.jira-bridge-modal {
+  padding: 1rem;
+
+  .modal-title {
+    margin-bottom: 1rem;
+  }
+
+  .field-group {
+    margin-bottom: 1rem;
+
+    label {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-weight: 500;
+    }
+  }
+
+  .modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+  }
+
+  .error {
+    color: var(--text-error);
+  }
+}

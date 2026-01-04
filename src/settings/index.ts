@@ -1,0 +1,1 @@
+export { JiraBridgeSettingsTab } from './SettingsTab';

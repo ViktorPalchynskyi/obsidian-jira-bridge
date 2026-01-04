@@ -80,6 +80,7 @@ describe('JiraClient', () => {
           Authorization: `Basic ${btoa('user@test.com:secret-token')}`,
           Accept: 'application/json',
           'Content-Type': 'application/json',
+          'User-Agent': 'obsidian-jira-bridge/1.0',
         },
       });
     });

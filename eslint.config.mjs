@@ -33,6 +33,9 @@ export default [
         crypto: 'readonly',
         btoa: 'readonly',
         setTimeout: 'readonly',
+        navigator: 'readonly',
+        open: 'readonly',
+        createFragment: 'readonly',
       },
     },
     plugins: {

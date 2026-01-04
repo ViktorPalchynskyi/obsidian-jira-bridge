@@ -417,7 +417,7 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
 
       const issueUrl = this.client.getIssueUrl(result.key);
 
-      new Notice(`Created ${result.key}`, 5000);
+      this.showSuccessNotice(result.key, issueUrl);
 
       this.submit({
         issueKey: result.key,
@@ -435,6 +435,28 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     if (!this.submitButton) return;
     this.submitButton.textContent = text;
     this.submitButton.disabled = disabled;
+  }
+
+  private showSuccessNotice(issueKey: string, issueUrl: string): void {
+    const fragment = createFragment();
+
+    fragment.createSpan({ text: 'Created ' });
+
+    const link = fragment.createEl('a', {
+      text: issueKey,
+      href: issueUrl,
+      cls: 'jira-issue-link',
+    });
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      open(issueUrl);
+    });
+
+    fragment.createSpan({ text: ' (URL copied)', cls: 'jira-copy-hint' });
+
+    navigator.clipboard.writeText(issueUrl);
+
+    new Notice(fragment, 8000);
   }
 
   private showError(message: string): void {

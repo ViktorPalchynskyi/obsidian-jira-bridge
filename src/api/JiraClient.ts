@@ -1,6 +1,7 @@
 import { requestUrl, RequestUrlResponse } from 'obsidian';
 import type { JiraInstance, JiraProject, JiraIssueType, JiraPriority, CreateIssueResponse, JiraFieldMeta } from '../types';
 import type { TestConnectionResult, JiraUser } from './types';
+import { markdownToAdf } from '../utils/markdownToAdf';
 
 export class JiraClient {
   constructor(private instance: JiraInstance) {}
@@ -15,6 +16,7 @@ export class JiraClient {
       Authorization: this.getAuthHeader(),
       Accept: 'application/json',
       'Content-Type': 'application/json',
+      'User-Agent': 'obsidian-jira-bridge/1.0',
     };
   }
 
@@ -240,11 +242,7 @@ export class JiraClient {
     };
 
     if (description) {
-      fields.description = {
-        type: 'doc',
-        version: 1,
-        content: [{ type: 'paragraph', content: [{ type: 'text', text: description }] }],
-      };
+      fields.description = markdownToAdf(description);
     }
 
     if (priorityId) {
@@ -257,17 +255,39 @@ export class JiraClient {
       }
     }
 
-    const response: RequestUrlResponse = await requestUrl({
-      url: this.buildUrl('/rest/api/3/issue'),
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ fields }),
-    });
+    const url = this.buildUrl('/rest/api/3/issue');
+    const body = JSON.stringify({ fields });
+
+    let response: RequestUrlResponse;
+    try {
+      response = await requestUrl({
+        url,
+        method: 'POST',
+        headers: this.getHeaders(),
+        body,
+      });
+    } catch (error: unknown) {
+      const err = error as { status?: number; text?: string };
+      let errorMessage = `Request failed: status ${err.status}`;
+      if (err.text) {
+        try {
+          const parsed = JSON.parse(err.text);
+          if (parsed.errorMessages) {
+            errorMessage = parsed.errorMessages.join(', ');
+          } else if (parsed.errors) {
+            errorMessage = Object.values(parsed.errors).join(', ');
+          }
+        } catch {
+          errorMessage = err.text;
+        }
+      }
+      throw new Error(errorMessage);
+    }
 
     if (response.status !== 201) {
       const errorMessage = response.json?.errors
         ? Object.values(response.json.errors).join(', ')
-        : `Failed to create issue: ${response.status}`;
+        : response.json?.errorMessages?.join(', ') || `Failed to create issue: ${response.status}`;
       throw new Error(errorMessage);
     }
 

@@ -7,3 +7,19 @@
 @use '../modals/FrontmatterMappingModal/styles.scss' as frontmatterMappingModal;
 @use '../settings/styles.scss' as settings;
 @use './statusbar.scss' as statusbar;
+
+.jira-issue-link {
+  color: var(--text-accent);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 600;
+
+  &:hover {
+    color: var(--text-accent-hover);
+  }
+}
+
+.jira-copy-hint {
+  color: var(--text-muted);
+  font-size: 0.85em;
+}

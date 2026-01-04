@@ -12,3 +12,5 @@ export { CustomFieldsModal } from './CustomFieldsModal/CustomFieldsModal';
 export type { CustomFieldsModalOptions, CustomFieldsModalResult } from './CustomFieldsModal/types';
 export { FrontmatterMappingModal } from './FrontmatterMappingModal/FrontmatterMappingModal';
 export type { FrontmatterMappingModalOptions, FrontmatterMappingModalResult } from './FrontmatterMappingModal/types';
+export { BulkCreateProgressModal } from './BulkCreateProgressModal';
+export { BulkCreateReportModal } from './BulkCreateReportModal';

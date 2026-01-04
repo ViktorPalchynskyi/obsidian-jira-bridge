@@ -5,6 +5,8 @@
 @use '../modals/FolderMappingModal/styles.scss' as folderMappingModal;
 @use '../modals/CustomFieldsModal/styles.scss' as customFieldsModal;
 @use '../modals/FrontmatterMappingModal/styles.scss' as frontmatterMappingModal;
+@use '../modals/BulkCreateProgressModal/styles.scss' as bulkCreateProgress;
+@use '../modals/BulkCreateReportModal/styles.scss' as bulkCreateReport;
 @use '../settings/styles.scss' as settings;
 @use './statusbar.scss' as statusbar;
 

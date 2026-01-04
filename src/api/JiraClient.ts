@@ -254,6 +254,41 @@ export class JiraClient {
     return null;
   }
 
+  async searchIssuesBySummaries(projectKey: string, summaries: string[]): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
+    if (summaries.length === 0) return result;
+
+    const summaryConditions = summaries.map(s => `summary ~ "${s.replace(/"/g, '\\"')}"`).join(' OR ');
+    const jql = `project=${projectKey} AND (${summaryConditions})`;
+    const url = this.buildUrl('/rest/api/3/search/jql') + `?jql=${encodeURIComponent(jql)}&maxResults=100&fields=summary`;
+
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url,
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return result;
+      }
+
+      const normalizedSummaries = new Map(summaries.map(s => [s.toLowerCase().trim(), s]));
+
+      for (const issue of response.json.issues) {
+        const fields = issue.fields as Record<string, unknown>;
+        const issueSummary = (fields.summary as string).toLowerCase().trim();
+        if (normalizedSummaries.has(issueSummary)) {
+          result.set(normalizedSummaries.get(issueSummary)!, issue.key as string);
+        }
+      }
+    } catch {
+      return result;
+    }
+
+    return result;
+  }
+
   async createIssue(
     projectKey: string,
     issueTypeId: string,

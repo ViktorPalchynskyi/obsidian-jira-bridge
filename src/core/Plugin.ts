@@ -1,4 +1,4 @@
-import { Plugin, MarkdownView, TFile } from 'obsidian';
+import { Plugin, MarkdownView, TFile, TFolder, Menu } from 'obsidian';
 import type { PluginSettings, ServiceToken, ProjectMappingConfig, FrontmatterFieldMapping } from '../types';
 import type { FrontmatterValues } from '../modals/CreateTicketModal/types';
 import { ServiceContainer } from './ServiceContainer';
@@ -7,8 +7,9 @@ import { JiraBridgeSettingsTab } from '../settings';
 import { DEFAULT_SETTINGS, DEFAULT_CONTENT_PARSING } from '../constants/defaults';
 import { MappingResolver } from '../mapping';
 import { StatusBarManager } from '../ui';
-import { CreateTicketModal } from '../modals';
+import { CreateTicketModal, BulkCreateProgressModal, BulkCreateReportModal } from '../modals';
 import { parseSummaryFromContent, parseDescriptionFromContent } from '../utils';
+import { BulkCreateService } from '../services/bulk';
 
 export class JiraBridgePlugin extends Plugin {
   private container!: ServiceContainer;
@@ -208,12 +209,46 @@ export class JiraBridgePlugin extends Plugin {
       }),
     );
 
+    this.registerEvent(
+      this.app.workspace.on('file-menu', (menu: Menu, file) => {
+        if (file instanceof TFolder) {
+          menu.addItem(item =>
+            item
+              .setTitle('Create Jira tickets from notes')
+              .setIcon('ticket')
+              .onClick(() => this.handleBulkCreateFromFolder(file)),
+          );
+        }
+      }),
+    );
+
     this.eventBus.on('settings:changed', () => {
       this.mappingResolver.updateSettings(this.settings);
       this.statusBar.updateSettings(this.settings.ui);
       const activeFile = this.app.workspace.getActiveFile();
       this.statusBar.update(activeFile?.path || null);
     });
+  }
+
+  private async handleBulkCreateFromFolder(folder: TFolder): Promise<void> {
+    const service = new BulkCreateService(this.app, this.settings);
+    const progressModal = new BulkCreateProgressModal(this.app);
+
+    progressModal.setOnCancel(() => {
+      service.cancel();
+      progressModal.disableCancel();
+    });
+
+    progressModal.open();
+
+    const result = await service.execute(folder, progress => {
+      progressModal.updateProgress(progress);
+    });
+
+    progressModal.close();
+
+    const reportModal = new BulkCreateReportModal(this.app, result);
+    reportModal.open();
   }
 
   private openSettings(): void {

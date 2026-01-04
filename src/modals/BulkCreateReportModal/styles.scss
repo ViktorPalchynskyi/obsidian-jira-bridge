@@ -1,0 +1,65 @@
+.bulk-create-report-modal {
+  max-height: 70vh;
+  overflow-y: auto;
+
+  .report-section {
+    margin-bottom: 20px;
+  }
+
+  .section-header {
+    font-size: 14px;
+    margin-bottom: 8px;
+
+    &.created {
+      color: var(--text-success);
+    }
+
+    &.skipped {
+      color: var(--text-muted);
+    }
+
+    &.failed {
+      color: var(--text-error);
+    }
+  }
+
+  .report-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 13px;
+
+    li {
+      padding: 4px 0;
+      border-bottom: 1px solid var(--background-modifier-border);
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+
+    .file-name {
+      font-weight: 500;
+    }
+
+    .reason {
+      color: var(--text-muted);
+    }
+
+    .error-message {
+      color: var(--text-error);
+    }
+  }
+
+  .button-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+
+    button {
+      min-width: 100px;
+    }
+  }
+}

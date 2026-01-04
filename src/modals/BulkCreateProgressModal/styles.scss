@@ -1,0 +1,60 @@
+.bulk-create-progress-modal {
+  .progress-text {
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+
+  .progress-container {
+    width: 100%;
+    height: 8px;
+    background: var(--background-modifier-border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: var(--interactive-accent);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+
+  .status-text {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    min-height: 20px;
+  }
+
+  .stats-container {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .stat {
+    font-size: 13px;
+
+    &-created {
+      color: var(--text-success);
+    }
+
+    &-skipped {
+      color: var(--text-muted);
+    }
+
+    &-failed {
+      color: var(--text-error);
+    }
+  }
+
+  .button-container {
+    display: flex;
+    justify-content: center;
+
+    button {
+      min-width: 100px;
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import { Plugin } from 'obsidian';
+import { Plugin, MarkdownView } from 'obsidian';
 import type { PluginSettings, ServiceToken } from '../types';
 import { ServiceContainer } from './ServiceContainer';
 import { EventBus } from './EventBus';
@@ -6,6 +6,7 @@ import { JiraBridgeSettingsTab } from '../settings';
 import { DEFAULT_SETTINGS } from '../constants/defaults';
 import { MappingResolver } from '../mapping';
 import { StatusBarManager } from '../ui';
+import { CreateTicketModal } from '../modals';
 
 export class JiraBridgePlugin extends Plugin {
   private container!: ServiceContainer;
@@ -71,6 +72,38 @@ export class JiraBridgePlugin extends Plugin {
       name: 'Open settings',
       callback: () => this.openSettings(),
     });
+
+    this.addCommand({
+      id: 'create-issue',
+      name: 'Create Jira issue',
+      hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'j' }],
+      callback: () => this.openCreateTicketModal(),
+    });
+  }
+
+  private openCreateTicketModal(): void {
+    const activeFile = this.app.workspace.getActiveFile();
+    const filePath = activeFile?.path || null;
+    const context = this.mappingResolver.resolve(filePath || '');
+
+    let initialTitle = '';
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (activeView) {
+      const editor = activeView.editor;
+      const selection = editor.getSelection();
+      initialTitle = selection || activeFile?.basename || '';
+    } else {
+      initialTitle = activeFile?.basename || '';
+    }
+
+    const modal = new CreateTicketModal(this.app, {
+      instances: this.settings.instances,
+      context,
+      initialTitle,
+      filePath: filePath || undefined,
+    });
+
+    modal.open();
   }
 
   private setupEventListeners(): void {

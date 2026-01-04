@@ -7,6 +7,7 @@ import { DEFAULT_SETTINGS } from '../constants/defaults';
 import { MappingResolver } from '../mapping';
 import { StatusBarManager } from '../ui';
 import { CreateTicketModal } from '../modals';
+import { parseSummaryFromContent, parseDescriptionFromContent } from '../utils';
 
 export class JiraBridgePlugin extends Plugin {
   private container!: ServiceContainer;
@@ -92,16 +93,21 @@ export class JiraBridgePlugin extends Plugin {
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (activeView) {
       const editor = activeView.editor;
-      const selection = editor.getSelection();
-
-      if (selection) {
-        initialDescription = selection;
-      }
-
       const content = editor.getValue();
-      const parsedSummary = this.parseSummaryFromContent(content);
+
+      const parsedSummary = parseSummaryFromContent(content);
       if (parsedSummary) {
         initialSummary = parsedSummary;
+      }
+
+      const parsedDescription = parseDescriptionFromContent(content);
+      if (parsedDescription) {
+        initialDescription = parsedDescription;
+      } else {
+        const selection = editor.getSelection();
+        if (selection) {
+          initialDescription = selection;
+        }
       }
     }
 
@@ -114,15 +120,6 @@ export class JiraBridgePlugin extends Plugin {
     });
 
     modal.open();
-  }
-
-  private parseSummaryFromContent(content: string): string | null {
-    const summaryRegex = /^## Summary\s*\n+```\s*\n(.+?)\n```/m;
-    const match = content.match(summaryRegex);
-    if (match && match[1]) {
-      return match[1].trim();
-    }
-    return null;
   }
 
   private setupEventListeners(): void {

@@ -1,0 +1,46 @@
+{
+  "name": "obsidian-jira-bridge",
+  "version": "0.1.0",
+  "description": "Obsidian plugin for Jira integration - create tickets, sync status, manage multiple instances",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "pnpm build:styles && node esbuild.config.mjs production",
+    "build:styles": "sass src/styles/main.scss:dist/styles.css --style=compressed --no-source-map",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "jira",
+    "jira-integration",
+    "productivity"
+  ],
+  "author": "Viktor Palchynskyi",
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "builtin-modules": "^3.3.0",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.0",
+    "obsidian": "^1.7.2",
+    "prettier": "^3.4.0",
+    "sass": "^1.80.0",
+    "tslib": "^2.6.0",
+    "typescript": "^5.3.0",
+    "vitest": "^2.0.0"
+  }
+}

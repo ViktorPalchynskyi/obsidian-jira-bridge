@@ -1,0 +1,11 @@
+{
+  "id": "obsidian-jira-bridge",
+  "name": "Jira Bridge",
+  "version": "0.1.0",
+  "minAppVersion": "1.0.0",
+  "description": "Integrate Jira ticket management into your Obsidian workflow - create tickets, sync status, manage multiple instances",
+  "author": "Viktor Palchynskyi",
+  "authorUrl": "https://github.com/ViktorPalchynskyi",
+  "fundingUrl": "",
+  "isDesktopOnly": false
+}

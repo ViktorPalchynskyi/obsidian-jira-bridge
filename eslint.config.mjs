@@ -20,6 +20,13 @@ export default [
         process: 'readonly',
         module: 'readonly',
         require: 'readonly',
+        HTMLElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        HTMLSpanElement: 'readonly',
+        HTMLButtonElement: 'readonly',
+        HTMLDivElement: 'readonly',
+        confirm: 'readonly',
+        crypto: 'readonly',
       },
     },
     plugins: {

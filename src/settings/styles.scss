@@ -1,0 +1,91 @@
+.jira-instances-section {
+  margin-bottom: 2rem;
+}
+
+.instance-list {
+  margin-top: 1rem;
+}
+
+.instance-card {
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-secondary);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.instance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.instance-title-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.instance-name {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.instance-badge {
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+
+  &.mod-disabled {
+    background: var(--background-modifier-border);
+    color: var(--text-muted);
+  }
+}
+
+.instance-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.instance-action-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background: var(--background-modifier-border);
+  color: var(--text-normal);
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: var(--background-modifier-border-hover);
+  }
+
+  &.mod-warning {
+    color: var(--text-error);
+
+    &:hover {
+      background: rgba(var(--color-red-rgb), 0.2);
+    }
+  }
+}
+
+.instance-details {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.instance-url {
+  margin-bottom: 0.25rem;
+}
+
+.instance-email {
+  font-size: 0.8rem;
+}

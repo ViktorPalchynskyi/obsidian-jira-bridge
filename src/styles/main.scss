@@ -1,3 +1,5 @@
 @use '../modals/base/styles.scss' as base;
+@use '../modals/AddJiraInstanceModal/styles.scss' as addInstance;
 @use '../modals/CreateTicketModal/styles.scss' as createTicket;
 @use '../modals/StatusChangeModal/styles.scss' as statusChange;
+@use '../settings/styles.scss' as settings;

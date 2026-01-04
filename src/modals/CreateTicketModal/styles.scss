@@ -1,14 +1,66 @@
 .jira-bridge-create-ticket {
-  .description-field {
-    textarea {
-      min-height: 100px;
-      resize: vertical;
+  min-width: 450px;
+
+  .modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    label {
+      font-weight: 500;
     }
   }
 
-  .smart-defaults-hint {
-    font-size: 0.85em;
-    color: var(--text-muted);
-    margin-top: 0.25rem;
+  .field-input,
+  .field-select,
+  .field-textarea {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 14px;
+    box-sizing: border-box;
+
+    &:focus {
+      outline: none;
+      border-color: var(--interactive-accent);
+      box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  .field-select {
+    cursor: pointer;
+    padding: 0 0.5rem;
+  }
+
+  .field-textarea {
+    min-height: 100px;
+    resize: vertical;
+    font-family: inherit;
+  }
+
+  .modal-error {
+    padding: 1rem;
+    background: var(--background-secondary);
+    border-radius: 4px;
+    text-align: center;
+
+    p {
+      margin: 0.5rem 0;
+      color: var(--text-muted);
+    }
   }
 }

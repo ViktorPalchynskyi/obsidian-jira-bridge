@@ -3,7 +3,8 @@ import type { JiraInstance, ResolvedContext } from '../../types';
 export interface CreateTicketModalOptions {
   instances: JiraInstance[];
   context: ResolvedContext;
-  initialTitle?: string;
+  initialSummary?: string;
+  initialDescription?: string;
   filePath?: string;
 }
 

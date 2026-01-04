@@ -86,24 +86,43 @@ export class JiraBridgePlugin extends Plugin {
     const filePath = activeFile?.path || null;
     const context = this.mappingResolver.resolve(filePath || '');
 
-    let initialTitle = '';
+    let initialSummary = activeFile?.basename || '';
+    let initialDescription = '';
+
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (activeView) {
       const editor = activeView.editor;
       const selection = editor.getSelection();
-      initialTitle = selection || activeFile?.basename || '';
-    } else {
-      initialTitle = activeFile?.basename || '';
+
+      if (selection) {
+        initialDescription = selection;
+      }
+
+      const content = editor.getValue();
+      const parsedSummary = this.parseSummaryFromContent(content);
+      if (parsedSummary) {
+        initialSummary = parsedSummary;
+      }
     }
 
     const modal = new CreateTicketModal(this.app, {
       instances: this.settings.instances,
       context,
-      initialTitle,
+      initialSummary,
+      initialDescription,
       filePath: filePath || undefined,
     });
 
     modal.open();
+  }
+
+  private parseSummaryFromContent(content: string): string | null {
+    const summaryRegex = /^## Summary\s*\n+```\s*\n(.+?)\n```/m;
+    const match = content.match(summaryRegex);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+    return null;
   }
 
   private setupEventListeners(): void {

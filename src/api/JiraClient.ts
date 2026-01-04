@@ -8,6 +8,9 @@ import type {
   JiraFieldMeta,
   JiraStatus,
   JiraTransition,
+  JiraBoard,
+  JiraSprint,
+  JiraSprintInfo,
 } from '../types';
 import type { TestConnectionResult, JiraUser } from './types';
 import { markdownToAdf } from '../utils/markdownToAdf';
@@ -387,6 +390,44 @@ export class JiraClient {
     };
   }
 
+  async searchIssues(query: string, maxResults: number = 5): Promise<{ key: string; summary: string }[]> {
+    if (!query || query.length < 2) return [];
+
+    const isKeyPattern = /^[A-Z]+-\d*$/i.test(query);
+    let jql: string;
+
+    if (isKeyPattern) {
+      jql = `key = "${query}" OR key ~ "${query}*" ORDER BY updated DESC`;
+    } else {
+      const escapedQuery = query.replace(/"/g, '\\"');
+      jql = `summary ~ "${escapedQuery}" ORDER BY updated DESC`;
+    }
+
+    const url = this.buildUrl('/rest/api/3/search/jql') + `?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&fields=summary`;
+
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url,
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return [];
+      }
+
+      return response.json.issues.map((issue: Record<string, unknown>) => {
+        const fields = issue.fields as Record<string, unknown>;
+        return {
+          key: issue.key as string,
+          summary: fields.summary as string,
+        };
+      });
+    } catch {
+      return [];
+    }
+  }
+
   async getTransitions(issueKey: string): Promise<JiraTransition[]> {
     const response: RequestUrlResponse = await requestUrl({
       url: this.buildUrl(`/rest/api/3/issue/${issueKey}/transitions`),
@@ -443,5 +484,146 @@ export class JiraClient {
       return error.message;
     }
     return 'Unknown error occurred';
+  }
+
+  async getBoardsForProject(projectKey: string): Promise<JiraBoard[]> {
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl(`/rest/agile/1.0/board?projectKeyOrId=${projectKey}`),
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return [];
+      }
+
+      return (response.json.values || []).map((board: Record<string, unknown>) => ({
+        id: String(board.id),
+        name: board.name as string,
+        type: board.type as 'scrum' | 'kanban' | 'simple',
+        location: board.location as JiraBoard['location'],
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async getSprintsForBoard(boardId: string): Promise<JiraSprint[]> {
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl(`/rest/agile/1.0/board/${boardId}/sprint?state=active,future`),
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return [];
+      }
+
+      return (response.json.values || []).map((sprint: Record<string, unknown>) => ({
+        id: sprint.id as number,
+        name: sprint.name as string,
+        state: sprint.state as 'active' | 'future' | 'closed',
+        startDate: sprint.startDate as string | undefined,
+        endDate: sprint.endDate as string | undefined,
+        goal: sprint.goal as string | undefined,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async getIssueSprintInfo(issueKey: string): Promise<JiraSprintInfo> {
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl(`/rest/agile/1.0/issue/${issueKey}?fields=sprint`),
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return { sprint: null, inBacklog: true };
+      }
+
+      const sprintField = response.json.fields?.sprint;
+      if (!sprintField) {
+        return { sprint: null, inBacklog: true };
+      }
+
+      return {
+        sprint: {
+          id: sprintField.id,
+          name: sprintField.name,
+          state: sprintField.state,
+          startDate: sprintField.startDate,
+          endDate: sprintField.endDate,
+          goal: sprintField.goal,
+        },
+        inBacklog: false,
+      };
+    } catch {
+      return { sprint: null, inBacklog: true };
+    }
+  }
+
+  async isIssueInBacklog(boardId: string, issueKey: string): Promise<boolean> {
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl(`/rest/agile/1.0/board/${boardId}/backlog?jql=key=${issueKey}`),
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return true;
+      }
+
+      const issues = response.json.issues || [];
+      return issues.some((issue: { key: string }) => issue.key === issueKey);
+    } catch {
+      return true;
+    }
+  }
+
+  async moveToSprint(issueKeys: string[], sprintId: number): Promise<void> {
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl(`/rest/agile/1.0/sprint/${sprintId}/issue`),
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ issues: issueKeys }),
+    });
+
+    if (response.status !== 204) {
+      throw new Error(`Failed to move issues to sprint: ${response.status}`);
+    }
+  }
+
+  async moveToBacklog(issueKeys: string[], boardId?: string): Promise<void> {
+    const endpoint = boardId ? `/rest/agile/1.0/backlog/${boardId}/issue` : '/rest/agile/1.0/backlog/issue';
+
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl(endpoint),
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ issues: issueKeys }),
+    });
+
+    if (response.status !== 200 && response.status !== 204) {
+      throw new Error(`Failed to move issues to backlog: ${response.status}`);
+    }
+  }
+
+  async moveToBoard(issueKeys: string[], boardId: string): Promise<void> {
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl(`/rest/agile/1.0/board/${boardId}/issue`),
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ issues: issueKeys }),
+    });
+
+    if (response.status !== 200 && response.status !== 204) {
+      throw new Error(`Failed to move issues to board: ${response.status}`);
+    }
   }
 }

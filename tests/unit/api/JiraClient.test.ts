@@ -296,4 +296,229 @@ describe('JiraClient', () => {
       await expect(client.transitionIssue('TEST-123', '999')).rejects.toThrow('Failed to transition issue: 400');
     });
   });
+
+  describe('getBoardsForProject', () => {
+    it('should return boards for project', async () => {
+      const instance = createMockInstance();
+      const client = new JiraClient(instance);
+
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 200,
+        json: {
+          values: [
+            { id: 1, name: 'Scrum Board', type: 'scrum', location: { projectKey: 'TEST' } },
+            { id: 2, name: 'Kanban Board', type: 'kanban', location: { projectKey: 'TEST' } },
+          ],
+        },
+        headers: {},
+        arrayBuffer: new ArrayBuffer(0),
+        text: '',
+      });
+
+      const result = await client.getBoardsForProject('TEST');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].type).toBe('scrum');
+      expect(result[1].type).toBe('kanban');
+    });
+
+    it('should return empty array on error', async () => {
+      const instance = createMockInstance();
+      const client = new JiraClient(instance);
+
+      mockRequestUrl.mockRejectedValueOnce(new Error('Network error'));
+
+      const result = await client.getBoardsForProject('TEST');
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getSprintsForBoard', () => {
+    it('should return active and future sprints', async () => {
+      const instance = createMockInstance();
+      const client = new JiraClient(instance);
+
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 200,
+        json: {
+          values: [
+            { id: 1, name: 'Sprint 1', state: 'active' },
+            { id: 2, name: 'Sprint 2', state: 'future' },
+          ],
+        },
+        headers: {},
+        arrayBuffer: new ArrayBuffer(0),
+        text: '',
+      });
+
+      const result = await client.getSprintsForBoard('1');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].state).toBe('active');
+    });
+  });
+
+  describe('getIssueSprintInfo', () => {
+    it('should return sprint info when issue is in sprint', async () => {
+      const instance = createMockInstance();
+      const client = new JiraClient(instance);
+
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 200,
+        json: {
+          fields: {
+            sprint: { id: 1, name: 'Sprint 1', state: 'active' },
+          },
+        },
+        headers: {},
+        arrayBuffer: new ArrayBuffer(0),
+        text: '',
+      });
+
+      const result = await client.getIssueSprintInfo('TEST-123');
+
+      expect(result.inBacklog).toBe(false);
+      expect(result.sprint?.name).toBe('Sprint 1');
+    });
+
+    it('should return inBacklog=true when no sprint', async () => {
+      const instance = createMockInstance();
+      const client = new JiraClient(instance);
+
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 200,
+        json: { fields: {} },
+        headers: {},
+        arrayBuffer: new ArrayBuffer(0),
+        text: '',
+      });
+
+      const result = await client.getIssueSprintInfo('TEST-123');
+
+      expect(result.inBacklog).toBe(true);
+      expect(result.sprint).toBeNull();
+    });
+  });
+
+  describe('isIssueInBacklog', () => {
+    it('should return true when issue is in backlog', async () => {
+      const instance = createMockInstance();
+      const client = new JiraClient(instance);
+
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 200,
+        json: { issues: [{ key: 'TEST-123' }] },
+        headers: {},
+        arrayBuffer: new ArrayBuffer(0),
+        text: '',
+      });
+
+      const result = await client.isIssueInBacklog('1', 'TEST-123');
+      expect(result).toBe(true);
+    });
+
+    it('should return false when issue is not in backlog', async () => {
+      const instance = createMockInstance();
+      const client = new JiraClient(instance);
+
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 200,
+        json: { issues: [] },
+        headers: {},
+        arrayBuffer: new ArrayBuffer(0),
+        text: '',
+      });
+
+      const result = await client.isIssueInBacklog('1', 'TEST-123');
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('moveToSprint', () => {
+    it('should move issues to sprint', async () => {
+      const instance = createMockInstance();
+      const client = new JiraClient(instance);
+
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 204,
+        json: {},
+        headers: {},
+        arrayBuffer: new ArrayBuffer(0),
+        text: '',
+      });
+
+      await expect(client.moveToSprint(['TEST-123'], 1)).resolves.toBeUndefined();
+
+      expect(mockRequestUrl).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ issues: ['TEST-123'] }),
+        }),
+      );
+    });
+  });
+
+  describe('moveToBacklog', () => {
+    it('should move issues to backlog', async () => {
+      const instance = createMockInstance();
+      const client = new JiraClient(instance);
+
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 204,
+        json: {},
+        headers: {},
+        arrayBuffer: new ArrayBuffer(0),
+        text: '',
+      });
+
+      await expect(client.moveToBacklog(['TEST-123'])).resolves.toBeUndefined();
+
+      expect(mockRequestUrl).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ issues: ['TEST-123'] }),
+        }),
+      );
+    });
+  });
+
+  describe('moveToBoard', () => {
+    it('should move issues to board', async () => {
+      const instance = createMockInstance();
+      const client = new JiraClient(instance);
+
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 204,
+        json: {},
+        headers: {},
+        arrayBuffer: new ArrayBuffer(0),
+        text: '',
+      });
+
+      await expect(client.moveToBoard(['TEST-123'], '5')).resolves.toBeUndefined();
+
+      expect(mockRequestUrl).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: 'https://test.atlassian.net/rest/agile/1.0/board/5/issue',
+          method: 'POST',
+          body: JSON.stringify({ issues: ['TEST-123'] }),
+        }),
+      );
+    });
+
+    it('should throw error on failure', async () => {
+      const instance = createMockInstance();
+      const client = new JiraClient(instance);
+
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 400,
+        json: {},
+        headers: {},
+        arrayBuffer: new ArrayBuffer(0),
+        text: '',
+      });
+
+      await expect(client.moveToBoard(['TEST-123'], '5')).rejects.toThrow('Failed to move issues to board: 400');
+    });
+  });
 });

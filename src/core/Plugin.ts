@@ -9,7 +9,7 @@ import { MappingResolver } from '../mapping';
 import { StatusBarManager } from '../ui';
 import { CreateTicketModal, BulkCreateProgressModal, BulkCreateReportModal, StatusChangeModal } from '../modals';
 import type { RecentIssue } from '../modals';
-import { parseSummaryFromContent, parseDescriptionFromContent } from '../utils';
+import { parseSummaryFromContent, parseDescriptionFromContent, addFrontmatterFields, readFrontmatterField } from '../utils';
 import { BulkCreateService } from '../services/bulk';
 
 export class JiraBridgePlugin extends Plugin {
@@ -87,11 +87,12 @@ export class JiraBridgePlugin extends Plugin {
     this.addCommand({
       id: 'change-status',
       name: 'Change Issue Status',
+      hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 's' }],
       callback: () => this.openStatusChangeModal(),
     });
   }
 
-  private openCreateTicketModal(): void {
+  private async openCreateTicketModal(): Promise<void> {
     const activeFile = this.app.workspace.getActiveFile();
     const filePath = activeFile?.path || null;
     const context = this.mappingResolver.resolve(filePath || '');
@@ -144,7 +145,14 @@ export class JiraBridgePlugin extends Plugin {
       projectConfig,
     });
 
-    modal.open();
+    const result = await modal.open();
+
+    if (result && activeFile) {
+      await addFrontmatterFields(this.app, activeFile, {
+        issue_id: result.issueKey,
+        issue_link: result.issueUrl,
+      });
+    }
   }
 
   private extractFrontmatterValues(file: TFile | null, projectConfig?: ProjectMappingConfig): FrontmatterValues {
@@ -264,6 +272,9 @@ export class JiraBridgePlugin extends Plugin {
       return;
     }
 
+    const activeFile = this.app.workspace.getActiveFile();
+    const initialIssueKey = activeFile ? readFrontmatterField(this.app, activeFile, 'issue_id') : undefined;
+
     const defaultInstance = enabledInstances.find(i => i.isDefault) || enabledInstances[0];
 
     const recentIssues: RecentIssue[] = (this.settings.recentIssues || []).sort((a, b) => b.timestamp - a.timestamp).slice(0, 10);
@@ -272,12 +283,24 @@ export class JiraBridgePlugin extends Plugin {
       instances: enabledInstances,
       recentIssues,
       defaultInstanceId: defaultInstance?.id,
+      initialIssueKey,
     });
 
     const result = await modal.open();
 
     if (result) {
       await this.addRecentIssue(result.issueKey, modal.getInstanceId());
+
+      if (activeFile && !initialIssueKey) {
+        const instance = enabledInstances.find(i => i.id === modal.getInstanceId());
+        if (instance) {
+          const issueUrl = `${instance.baseUrl.replace(/\/+$/, '')}/browse/${result.issueKey}`;
+          await addFrontmatterFields(this.app, activeFile, {
+            issue_id: result.issueKey,
+            issue_link: issueUrl,
+          });
+        }
+      }
     }
   }
 

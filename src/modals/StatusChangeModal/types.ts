@@ -11,6 +11,7 @@ export interface StatusChangeModalOptions {
   instances: JiraInstance[];
   recentIssues: RecentIssue[];
   defaultInstanceId?: string;
+  initialIssueKey?: string;
 }
 
 export interface RecentIssue {

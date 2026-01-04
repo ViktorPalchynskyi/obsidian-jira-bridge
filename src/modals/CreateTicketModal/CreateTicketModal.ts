@@ -401,9 +401,21 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     if (!isValid) return;
 
     this.state.isSubmitting = true;
-    this.updateSubmitButton('Creating...', true);
+    this.updateSubmitButton('Checking...', true);
 
     try {
+      const duplicate = await this.client.findDuplicateBySummary(this.state.projectKey, this.state.summary.trim());
+
+      if (duplicate) {
+        const issueUrl = this.client.getIssueUrl(duplicate.key);
+        this.showDuplicateNotice(duplicate.key, issueUrl);
+        this.state.isSubmitting = false;
+        this.updateSubmitButton('Create', false);
+        return;
+      }
+
+      this.updateSubmitButton('Creating...', true);
+
       const customFields = Object.keys(this.state.customFieldValues).length > 0 ? this.state.customFieldValues : undefined;
 
       const result = await this.client.createIssue(
@@ -455,6 +467,26 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     fragment.createSpan({ text: ' (URL copied)', cls: 'jira-copy-hint' });
 
     navigator.clipboard.writeText(issueUrl);
+
+    new Notice(fragment, 8000);
+  }
+
+  private showDuplicateNotice(issueKey: string, issueUrl: string): void {
+    const fragment = createFragment();
+
+    fragment.createSpan({ text: 'Duplicate found: ' });
+
+    const link = fragment.createEl('a', {
+      text: issueKey,
+      href: issueUrl,
+      cls: 'jira-issue-link',
+    });
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      open(issueUrl);
+    });
+
+    fragment.createSpan({ text: ' already exists with same summary', cls: 'jira-copy-hint' });
 
     new Notice(fragment, 8000);
   }

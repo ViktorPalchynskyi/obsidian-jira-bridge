@@ -227,6 +227,33 @@ export class JiraClient {
     });
   }
 
+  async findDuplicateBySummary(projectKey: string, summary: string): Promise<{ key: string; summary: string } | null> {
+    const escapedSummary = summary.replace(/"/g, '\\"');
+    const jql = `project=${projectKey} AND summary ~ "${escapedSummary}"`;
+    const url = this.buildUrl('/rest/api/3/search/jql') + `?jql=${encodeURIComponent(jql)}&maxResults=50&fields=summary`;
+
+    const response: RequestUrlResponse = await requestUrl({
+      url,
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    if (response.status !== 200) {
+      return null;
+    }
+
+    const normalizedSearch = summary.toLowerCase().trim();
+    for (const issue of response.json.issues) {
+      const fields = issue.fields as Record<string, unknown>;
+      const issueSummary = (fields.summary as string).toLowerCase().trim();
+      if (issueSummary === normalizedSearch) {
+        return { key: issue.key as string, summary: fields.summary as string };
+      }
+    }
+
+    return null;
+  }
+
   async createIssue(
     projectKey: string,
     issueTypeId: string,

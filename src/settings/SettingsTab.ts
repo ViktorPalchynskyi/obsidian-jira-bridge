@@ -2,9 +2,11 @@ import { App, PluginSettingTab, Setting } from 'obsidian';
 import type { JiraBridgePlugin } from '../core/Plugin';
 import type { JiraInstance } from '../types';
 import { AddJiraInstanceModal } from '../modals';
+import { JiraClient } from '../api';
 
 export class JiraBridgeSettingsTab extends PluginSettingTab {
   plugin: JiraBridgePlugin;
+  private toastContainer: HTMLElement | null = null;
 
   constructor(app: App, plugin: JiraBridgePlugin) {
     super(app, plugin);
@@ -14,10 +16,27 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
+    containerEl.addClass('jira-bridge-settings');
 
     containerEl.createEl('h1', { text: 'Jira Bridge Settings' });
 
+    this.toastContainer = containerEl.createEl('div', { cls: 'settings-toast-container' });
+
     this.renderInstancesSection(containerEl);
+  }
+
+  private showToast(message: string, type: 'success' | 'error'): void {
+    if (!this.toastContainer) return;
+
+    const toast = this.toastContainer.createEl('div', {
+      cls: `settings-toast ${type}`,
+      text: message,
+    });
+
+    setTimeout(() => {
+      toast.addClass('fade-out');
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
   }
 
   private renderInstancesSection(containerEl: HTMLElement): void {
@@ -69,8 +88,8 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
       cls: 'instance-action-btn',
       attr: { 'aria-label': 'Test connection' },
     });
-    testButton.addEventListener('click', () => {
-      // TODO: US-1.2 - implement test connection
+    testButton.addEventListener('click', async () => {
+      await this.handleTestConnection(instance, testButton);
     });
 
     if (!instance.isDefault) {
@@ -146,5 +165,22 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
 
     await this.plugin.saveSettings();
     this.display();
+  }
+
+  private async handleTestConnection(instance: JiraInstance, button: HTMLButtonElement): Promise<void> {
+    button.disabled = true;
+    button.textContent = 'Testing...';
+
+    const client = new JiraClient(instance);
+    const result = await client.testConnection();
+
+    button.disabled = false;
+    button.textContent = 'Test';
+
+    if (result.success && result.user) {
+      this.showToast(`✓ Connected to ${instance.name} as ${result.user.displayName}`, 'success');
+    } else {
+      this.showToast(`✗ ${instance.name}: ${result.error}`, 'error');
+    }
   }
 }

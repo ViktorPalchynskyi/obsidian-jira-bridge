@@ -27,6 +27,8 @@ export default [
         HTMLDivElement: 'readonly',
         confirm: 'readonly',
         crypto: 'readonly',
+        btoa: 'readonly',
+        setTimeout: 'readonly',
       },
     },
     plugins: {

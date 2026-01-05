@@ -1,0 +1,207 @@
+.bulk-status-change-modal {
+  .modal-description {
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    font-size: 14px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+  }
+
+  .status-section {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: var(--background-secondary);
+    border-radius: 6px;
+
+    .status-info {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-normal);
+
+      .issue-key {
+        font-weight: 600;
+        color: var(--text-accent);
+      }
+    }
+  }
+
+  .transitions-section {
+    margin-bottom: 16px;
+
+    > label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+  }
+
+  .transitions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .transition-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: var(--background-modifier-hover);
+    }
+
+    &.selected {
+      border-color: var(--interactive-accent);
+      background: var(--background-modifier-hover);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--interactive-accent);
+    }
+
+    input[type='radio'] {
+      margin: 0;
+    }
+  }
+
+  .transition-label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .transition-name {
+      font-weight: 500;
+    }
+
+    .transition-target {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+  }
+
+  .location-section {
+    margin-bottom: 16px;
+
+    > label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+  }
+
+  .location-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .location-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: var(--background-modifier-hover);
+    }
+
+    &.selected {
+      border-color: var(--interactive-accent);
+      background: var(--background-modifier-hover);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--interactive-accent);
+    }
+
+    input[type='radio'] {
+      margin: 0;
+    }
+  }
+
+  .location-label {
+    flex: 1;
+  }
+
+  .sprint-picker {
+    margin-top: 8px;
+    padding: 12px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+  }
+
+  .sprint-picker-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: var(--background-modifier-hover);
+    }
+
+    &.selected {
+      border-color: var(--interactive-accent);
+      background: var(--background-modifier-hover);
+    }
+
+    .sprint-state {
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-left: 4px;
+    }
+  }
+
+  .loading {
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 8px 0;
+  }
+
+  .error-message {
+    color: var(--text-error);
+    padding: 8px;
+    background: var(--background-modifier-error);
+    border-radius: 4px;
+  }
+
+  .no-transitions {
+    color: var(--text-muted);
+    padding: 12px;
+    text-align: center;
+    background: var(--background-secondary);
+    border-radius: 4px;
+  }
+
+  .button-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+  }
+}

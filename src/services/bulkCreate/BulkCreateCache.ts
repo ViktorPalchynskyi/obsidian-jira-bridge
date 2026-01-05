@@ -6,6 +6,7 @@ export class BulkCreateCache {
   private priorities = new Map<string, JiraPriority[]>();
   private fieldsMeta = new Map<string, JiraFieldMeta[]>();
   private existingSummaries = new Map<string, Map<string, string>>();
+  private assignableUsers = new Map<string, { accountId: string; displayName: string }[]>();
   private clients = new Map<string, JiraClient>();
 
   constructor(private instances: JiraInstance[]) {
@@ -120,10 +121,35 @@ export class BulkCreateCache {
     projectSummaries.set(summary.toLowerCase(), issueKey);
   }
 
+  async getAssignableUsers(instanceId: string, projectKey: string): Promise<{ accountId: string; displayName: string }[]> {
+    const cacheKey = `${instanceId}:${projectKey}`;
+    if (this.assignableUsers.has(cacheKey)) {
+      return this.assignableUsers.get(cacheKey)!;
+    }
+
+    const client = this.clients.get(instanceId);
+    if (!client) return [];
+
+    const users = await client.getAssignableUsers(projectKey);
+    this.assignableUsers.set(cacheKey, users);
+    return users;
+  }
+
+  findCreatedIssue(instanceId: string, projectKey: string, summary: string): string | null {
+    const cacheKey = `${instanceId}:${projectKey}`;
+    const projectSummaries = this.existingSummaries.get(cacheKey);
+
+    if (!projectSummaries) return null;
+
+    const issueKey = projectSummaries.get(summary.toLowerCase());
+    return issueKey && issueKey !== '' ? issueKey : null;
+  }
+
   clear(): void {
     this.issueTypes.clear();
     this.priorities.clear();
     this.fieldsMeta.clear();
     this.existingSummaries.clear();
+    this.assignableUsers.clear();
   }
 }

@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { TFile, TFolder, App } from 'obsidian';
 import type { PluginSettings, JiraInstance } from '../../../../src/types';
-import type { BulkCreateProgress } from '../../../../src/services/bulk';
+import type { BulkCreateProgress } from '../../../../src/services/bulkCreate';
 
 vi.mock('obsidian', () => ({
   requestUrl: vi.fn(),
 }));
 
-vi.mock('../../../../src/services/bulk/BulkCreateCache', () => ({
+vi.mock('../../../../src/services/bulkCreate/BulkCreateCache', () => ({
   BulkCreateCache: vi.fn().mockImplementation(() => ({
     getClient: vi.fn().mockReturnValue({
       getIssueUrl: vi.fn().mockReturnValue('https://jira.test/browse/TEST-1'),
@@ -16,12 +16,14 @@ vi.mock('../../../../src/services/bulk/BulkCreateCache', () => ({
     }),
     getIssueTypes: vi.fn().mockResolvedValue([{ id: '10001', name: 'Story' }]),
     getPriorities: vi.fn().mockResolvedValue([{ id: '3', name: 'Medium' }]),
+    getAssignableUsers: vi.fn().mockResolvedValue([]),
     checkDuplicates: vi.fn().mockResolvedValue(new Map()),
     addCreatedIssue: vi.fn(),
+    findCreatedIssue: vi.fn().mockReturnValue(null),
   })),
 }));
 
-import { BulkCreateService } from '../../../../src/services/bulk/BulkCreateService';
+import { BulkCreateService } from '../../../../src/services/bulkCreate/BulkCreateService';
 
 const createMockInstance = (): JiraInstance => ({
   id: 'instance-1',
@@ -170,9 +172,7 @@ describe('BulkCreateService', () => {
     });
 
     it('should stop processing when cancelled', async () => {
-      const files = Array.from({ length: 10 }, (_, i) =>
-        createMockFile(`note${i}.md`, `projects/test/note${i}.md`),
-      );
+      const files = Array.from({ length: 10 }, (_, i) => createMockFile(`note${i}.md`, `projects/test/note${i}.md`));
       const folder = createMockFolder('projects/test', files);
 
       const service = new BulkCreateService(mockApp, mockSettings);

@@ -69,10 +69,13 @@ export class BulkCreateService {
       }
     }
 
+    const { withoutParent, withParent } = this.partitionNotesByDependency(notesAfterDuplicateCheck);
+    const allNotesToCreate = [...withoutParent, ...withParent];
+
     progress.status = 'Creating tickets...';
     onProgress(progress);
 
-    for (const note of notesAfterDuplicateCheck) {
+    for (const note of allNotesToCreate) {
       if (this.cancelled) {
         progress.status = 'Cancelled';
         onProgress(progress);
@@ -188,6 +191,24 @@ export class BulkCreateService {
     return { notesToProcess, skippedNotes };
   }
 
+  private partitionNotesByDependency(notes: NoteToProcess[]): {
+    withoutParent: NoteToProcess[];
+    withParent: NoteToProcess[];
+  } {
+    const withoutParent: NoteToProcess[] = [];
+    const withParent: NoteToProcess[] = [];
+
+    for (const note of notes) {
+      if (note.frontmatterValues.parentSummary) {
+        withParent.push(note);
+      } else {
+        withoutParent.push(note);
+      }
+    }
+
+    return { withoutParent, withParent };
+  }
+
   private extractFrontmatterValues(file: TFile, projectConfig?: ProjectMappingConfig): FrontmatterValues {
     const values: FrontmatterValues = {};
 
@@ -219,6 +240,9 @@ export class BulkCreateService {
           break;
         case 'priority':
           if (typeof fmValue === 'string') values.priority = fmValue;
+          break;
+        case 'assignee':
+          if (typeof fmValue === 'string') values.assignee = fmValue;
           break;
         case 'custom':
           if (mapping.customFieldId) {
@@ -276,6 +300,20 @@ export class BulkCreateService {
       if (matchedPriority) priorityId = matchedPriority.id;
     }
 
+    let assigneeAccountId: string | undefined;
+    if (note.frontmatterValues.assignee) {
+      const users = await this.cache.getAssignableUsers(note.instanceId, note.projectKey);
+      const normalizedSearch = note.frontmatterValues.assignee.toLowerCase();
+
+      const matchedUser = users.find(
+        u => u.displayName.toLowerCase() === normalizedSearch || u.displayName.toLowerCase().includes(normalizedSearch),
+      );
+
+      if (matchedUser) {
+        assigneeAccountId = matchedUser.accountId;
+      }
+    }
+
     const customFields: Record<string, unknown> = {};
 
     if (note.frontmatterValues.labels && note.frontmatterValues.labels.length > 0) {
@@ -283,11 +321,25 @@ export class BulkCreateService {
     }
 
     if (note.frontmatterValues.parentSummary) {
-      const parentIssues = await client.searchIssuesBySummary(note.projectKey, note.frontmatterValues.parentSummary, 5);
-      const exactMatch = parentIssues.find(i => i.summary.toLowerCase() === note.frontmatterValues.parentSummary!.toLowerCase());
-      if (exactMatch) {
-        customFields['parent'] = { key: exactMatch.key };
+      let parentKey: string | null = null;
+
+      parentKey = this.cache.findCreatedIssue(note.instanceId, note.projectKey, note.frontmatterValues.parentSummary);
+
+      if (!parentKey) {
+        const parentIssues = await client.searchIssuesBySummary(note.projectKey, note.frontmatterValues.parentSummary, 5);
+        const exactMatch = parentIssues.find(i => i.summary.toLowerCase() === note.frontmatterValues.parentSummary!.toLowerCase());
+        if (exactMatch) {
+          parentKey = exactMatch.key;
+        }
       }
+
+      if (parentKey) {
+        customFields['parent'] = { key: parentKey };
+      }
+    }
+
+    if (assigneeAccountId) {
+      customFields['assignee'] = { accountId: assigneeAccountId };
     }
 
     if (note.frontmatterValues.customFields) {

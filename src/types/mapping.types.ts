@@ -2,7 +2,7 @@ import type { JiraInstance, JiraProject } from './jira.types';
 
 export type MappingType = 'instance' | 'project';
 
-export type BuiltInFieldType = 'issue_type' | 'labels' | 'parent' | 'priority';
+export type BuiltInFieldType = 'issue_type' | 'labels' | 'parent' | 'priority' | 'assignee';
 export type FrontmatterFieldType = BuiltInFieldType | 'custom';
 
 export interface FrontmatterFieldMapping {

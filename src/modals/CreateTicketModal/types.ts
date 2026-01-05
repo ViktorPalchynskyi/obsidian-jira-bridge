@@ -5,6 +5,7 @@ export interface FrontmatterValues {
   labels?: string[];
   parentSummary?: string;
   priority?: string;
+  assignee?: string;
   customFields?: Record<string, unknown>;
 }
 

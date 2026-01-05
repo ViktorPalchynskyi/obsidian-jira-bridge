@@ -1,5 +1,5 @@
 import { App, Modal } from 'obsidian';
-import type { BulkCreateResult } from '../../services/bulk';
+import type { BulkCreateResult } from '../../services/bulkCreate';
 
 export class BulkCreateReportModal extends Modal {
   constructor(

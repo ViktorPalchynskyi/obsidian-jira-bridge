@@ -1,4 +1,4 @@
-import { Plugin, MarkdownView, TFile, TFolder, Menu } from 'obsidian';
+import { Plugin, MarkdownView, TFile, TFolder, Menu, Notice } from 'obsidian';
 import type { PluginSettings, ServiceToken, ProjectMappingConfig, FrontmatterFieldMapping } from '../types';
 import type { FrontmatterValues } from '../modals/CreateTicketModal/types';
 import { ServiceContainer } from './ServiceContainer';
@@ -7,10 +7,19 @@ import { JiraBridgeSettingsTab } from '../settings';
 import { DEFAULT_SETTINGS, DEFAULT_CONTENT_PARSING } from '../constants/defaults';
 import { MappingResolver } from '../mapping';
 import { StatusBarManager } from '../ui';
-import { CreateTicketModal, BulkCreateProgressModal, BulkCreateReportModal, StatusChangeModal } from '../modals';
+import {
+  CreateTicketModal,
+  BulkCreateProgressModal,
+  BulkCreateReportModal,
+  BulkStatusChangeModal,
+  BulkStatusChangeProgressModal,
+  BulkStatusChangeReportModal,
+  StatusChangeModal,
+} from '../modals';
 import type { RecentIssue } from '../modals';
 import { parseSummaryFromContent, parseDescriptionFromContent, addFrontmatterFields, readFrontmatterField } from '../utils';
-import { BulkCreateService } from '../services/bulk';
+import { BulkCreateService } from '../services/bulkCreate';
+import { BulkStatusChangeService } from '../services/bulkStatusChange';
 
 export class JiraBridgePlugin extends Plugin {
   private container!: ServiceContainer;
@@ -233,6 +242,13 @@ export class JiraBridgePlugin extends Plugin {
               .setIcon('ticket')
               .onClick(() => this.handleBulkCreateFromFolder(file)),
           );
+
+          menu.addItem(item =>
+            item
+              .setTitle('Change status for Jira tickets')
+              .setIcon('refresh-cw')
+              .onClick(() => this.handleBulkStatusChangeFromFolder(file)),
+          );
         }
       }),
     );
@@ -260,9 +276,57 @@ export class JiraBridgePlugin extends Plugin {
       progressModal.updateProgress(progress);
     });
 
+    for (const created of result.created) {
+      try {
+        await addFrontmatterFields(this.app, created.file, {
+          issue_id: created.issueKey,
+          issue_link: created.issueUrl,
+        });
+      } catch (error) {
+        console.error(`Failed to update frontmatter for ${created.file.name}:`, error);
+      }
+    }
+
     progressModal.close();
 
     const reportModal = new BulkCreateReportModal(this.app, result);
+    reportModal.open();
+  }
+
+  private async handleBulkStatusChangeFromFolder(folder: TFolder): Promise<void> {
+    const enabledInstances = this.settings.instances.filter(i => i.enabled);
+    if (enabledInstances.length === 0) {
+      new Notice('No Jira instances configured');
+      return;
+    }
+
+    const modal = new BulkStatusChangeModal(this.app, {
+      instances: enabledInstances,
+      defaultInstanceId: enabledInstances.find(i => i.isDefault)?.id || enabledInstances[0].id,
+      folder,
+      settings: this.settings,
+    });
+
+    const selection = await modal.open();
+    if (!selection) return;
+
+    const service = new BulkStatusChangeService(this.app, this.settings, selection.instanceId);
+    const progressModal = new BulkStatusChangeProgressModal(this.app);
+
+    progressModal.setOnCancel(() => {
+      service.cancel();
+      progressModal.disableCancel();
+    });
+
+    progressModal.open();
+
+    const result = await service.execute(folder, selection, progress => {
+      progressModal.updateProgress(progress);
+    });
+
+    progressModal.close();
+
+    const reportModal = new BulkStatusChangeReportModal(this.app, result);
     reportModal.open();
   }
 

@@ -14,3 +14,6 @@ export { FrontmatterMappingModal } from './FrontmatterMappingModal/FrontmatterMa
 export type { FrontmatterMappingModalOptions, FrontmatterMappingModalResult } from './FrontmatterMappingModal/types';
 export { BulkCreateProgressModal } from './BulkCreateProgressModal';
 export { BulkCreateReportModal } from './BulkCreateReportModal';
+export { BulkStatusChangeModal } from './BulkStatusChangeModal';
+export { BulkStatusChangeProgressModal } from './BulkStatusChangeProgressModal';
+export { BulkStatusChangeReportModal } from './BulkStatusChangeReportModal';

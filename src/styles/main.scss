@@ -10,6 +10,7 @@
 @use '../modals/BulkStatusChangeModal/styles.scss' as bulkStatusChange;
 @use '../settings/styles.scss' as settings;
 @use './statusbar.scss' as statusbar;
+@use './file-selection.scss' as fileSelection;
 
 .jira-issue-link {
   color: var(--text-accent);

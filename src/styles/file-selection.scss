@@ -1,0 +1,86 @@
+.tree-item.jira-bridge-file-selected {
+  .tree-item-self {
+    background-color: var(--background-modifier-hover);
+    border-left: 3px solid var(--interactive-accent);
+    padding-left: calc(var(--size-4-1) - 3px);
+    transition: all 0.15s ease-in-out;
+  }
+
+  &:hover .tree-item-self {
+    background-color: var(--background-modifier-hover-active);
+  }
+}
+
+.jira-bridge-selection-counter {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.2s ease-out;
+  user-select: none;
+  min-width: 200px;
+
+  .selection-counter-header {
+    font-weight: 600;
+    color: var(--text-normal);
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  .selection-counter-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .selection-action-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--interactive-normal);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: var(--interactive-hover);
+    }
+
+    &:active {
+      background: var(--interactive-accent);
+      color: var(--text-on-accent);
+    }
+
+    &.selection-clear-btn {
+      background: var(--background-modifier-error);
+      color: var(--text-error);
+
+      &:hover {
+        background: var(--background-modifier-error-hover);
+      }
+
+      &:active {
+        background: var(--text-error);
+        color: var(--text-on-accent);
+      }
+    }
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

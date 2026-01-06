@@ -438,7 +438,7 @@ export class JiraBridgePlugin extends Plugin {
     const client = new JiraClient(instance);
 
     try {
-      const issue = await client.getIssue(issueKey);
+      const issue = await client.getIssue(issueKey, ['summary']);
 
       const existing = this.settings.recentIssues.findIndex(r => r.key === issueKey && r.instanceId === instanceId);
       if (existing !== -1) {
@@ -447,7 +447,7 @@ export class JiraBridgePlugin extends Plugin {
 
       this.settings.recentIssues.unshift({
         key: issue.key,
-        summary: issue.summary,
+        summary: String(issue.fields.summary || ''),
         instanceId,
         timestamp: Date.now(),
       });

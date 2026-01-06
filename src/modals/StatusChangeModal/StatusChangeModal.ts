@@ -299,9 +299,9 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
     this.updateStatusDisplay();
 
     try {
-      const issue = await this.client.getIssue(this.state.issueKey);
-      this.state.currentStatus = issue.status;
-      this.state.issueSummary = issue.summary;
+      const issue = await this.client.getIssue(this.state.issueKey, ['summary', 'status']);
+      this.state.currentStatus = issue.fields.status as any;
+      this.state.issueSummary = String(issue.fields.summary || '');
       this.state.issueKey = issue.key;
 
       if (this.issueKeyInput) {

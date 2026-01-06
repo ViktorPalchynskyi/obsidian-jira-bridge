@@ -93,8 +93,8 @@ export class BulkStatusChangeService {
       onProgress(progress);
 
       try {
-        const issue = await client.getIssue(note.issueKey);
-        const oldStatus = issue.status.name;
+        const issue = await client.getIssue(note.issueKey, ['status']);
+        const oldStatus = (issue.fields.status as any)?.name || '';
 
         if (options.transitionId) {
           await client.transitionIssue(note.issueKey, options.transitionId);

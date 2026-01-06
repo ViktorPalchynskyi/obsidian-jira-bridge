@@ -11,6 +11,7 @@ import type {
   JiraBoard,
   JiraSprint,
   JiraSprintInfo,
+  JiraIssueData,
 } from '../types';
 import type { TestConnectionResult, JiraUser } from './types';
 import { markdownToAdf } from '../utils/markdownToAdf';
@@ -372,9 +373,11 @@ export class JiraClient {
     };
   }
 
-  async getIssue(issueKey: string): Promise<{ key: string; summary: string; status: JiraStatus }> {
+  async getIssue(issueKey: string, fields?: string[]): Promise<JiraIssueData> {
+    const fieldList = fields?.join(',') || 'summary,status,assignee,priority,updated,reporter,description,labels';
+
     const response: RequestUrlResponse = await requestUrl({
-      url: this.buildUrl(`/rest/api/3/issue/${issueKey}?fields=summary,status`),
+      url: this.buildUrl(`/rest/api/3/issue/${issueKey}?fields=${fieldList}`),
       method: 'GET',
       headers: this.getHeaders(),
     });
@@ -385,8 +388,7 @@ export class JiraClient {
 
     return {
       key: response.json.key,
-      summary: response.json.fields.summary,
-      status: response.json.fields.status,
+      fields: response.json.fields,
     };
   }
 

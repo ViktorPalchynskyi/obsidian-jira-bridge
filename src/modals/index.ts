@@ -17,3 +17,7 @@ export { BulkCreateReportModal } from './BulkCreateReportModal';
 export { BulkStatusChangeModal } from './BulkStatusChangeModal';
 export { BulkStatusChangeProgressModal } from './BulkStatusChangeProgressModal';
 export { BulkStatusChangeReportModal } from './BulkStatusChangeReportModal';
+export { AdvancedConfigModal } from './AdvancedConfigModal/AdvancedConfigModal';
+export type { AdvancedConfigModalOptions } from './AdvancedConfigModal/types';
+export { SyncSettingsModal } from './SyncSettingsModal/SyncSettingsModal';
+export type { SyncSettingsModalOptions, SyncSettingsModalResult } from './SyncSettingsModal/types';

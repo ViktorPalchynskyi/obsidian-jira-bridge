@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import type { JiraBridgePlugin } from '../core/Plugin';
 import type { JiraInstance, FolderMapping, MappingType } from '../types';
-import { JiraInstanceModal, FolderMappingModal, CustomFieldsModal, FrontmatterMappingModal } from '../modals';
+import { JiraInstanceModal, FolderMappingModal, CustomFieldsModal, FrontmatterMappingModal, AdvancedConfigModal } from '../modals';
 import { JiraClient } from '../api';
 
 export class JiraBridgeSettingsTab extends PluginSettingTab {
@@ -286,24 +286,13 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
     }
 
     if (type === 'project' && mapping.projectKey && parentInstanceId) {
-      const mappingButton = actions.createEl('button', {
-        text: 'Mapping',
+      const advancedBtn = actions.createEl('button', {
+        text: 'Advanced Config',
         cls: 'mapping-action-btn',
-        attr: { 'aria-label': 'Configure frontmatter mapping' },
+        attr: { 'aria-label': 'Advanced configuration' },
       });
-      mappingButton.addEventListener('click', async () => {
-        await this.handleConfigureMapping(mapping, parentInstanceId);
-      });
-
-      const customFieldsEnabled = this.plugin.settings.ui.enableCustomFields;
-      const fieldsButton = actions.createEl('button', {
-        text: 'Fields',
-        cls: customFieldsEnabled ? 'mapping-action-btn' : 'mapping-action-btn mod-muted',
-        attr: { 'aria-label': 'Configure custom fields' },
-      });
-      fieldsButton.disabled = !customFieldsEnabled;
-      fieldsButton.addEventListener('click', async () => {
-        await this.handleConfigureFields(mapping, parentInstanceId);
+      advancedBtn.addEventListener('click', async () => {
+        await this.handleAdvancedConfig(mapping, parentInstanceId);
       });
     }
 
@@ -447,6 +436,36 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
         await this.plugin.saveSettings();
       }
     }
+  }
+
+  private async handleAdvancedConfig(mapping: FolderMapping, instanceId: string): Promise<void> {
+    const instance = this.plugin.settings.instances.find(i => i.id === instanceId);
+    if (!instance) return;
+
+    const customFields = this.plugin.settings.createTicket.customFields.filter(
+      cf => cf.enabled && (!cf.instanceId || cf.instanceId === instanceId) && (!cf.projectKey || cf.projectKey === mapping.projectKey),
+    );
+
+    const modal = new AdvancedConfigModal(this.app, {
+      mapping,
+      instance,
+      customFields,
+      globalSyncFields: this.plugin.settings.sync.syncFields,
+      onUpdate: async projectConfig => {
+        const mappingIndex = this.plugin.settings.mappings.findIndex(m => m.id === mapping.id);
+        if (mappingIndex !== -1) {
+          this.plugin.settings.mappings[mappingIndex].projectConfig = projectConfig;
+          await this.plugin.saveSettings();
+        }
+      },
+      onUpdateCustomFields: async fields => {
+        this.plugin.settings.createTicket.customFields = fields;
+        await this.plugin.saveSettings();
+      },
+    });
+
+    await modal.open();
+    this.display();
   }
 
   private renderUISection(containerEl: HTMLElement): void {

@@ -1,4 +1,4 @@
-import type { App, TFile, TFolder } from 'obsidian';
+import type { App, TFile } from 'obsidian';
 import type { PluginSettings } from '../../types';
 import type {
   NoteToChangeStatus,
@@ -7,11 +7,13 @@ import type {
   BulkStatusChangeProgress,
   SkippedNote,
 } from './types';
+import type { BulkOperationTarget } from '../types';
 import { MappingResolver } from '../../mapping';
 import { JiraClient } from '../../api/JiraClient';
 import { parseSummaryFromContent } from '../../utils';
 import { addFrontmatterFields } from '../../utils/frontmatter';
 import { DEFAULT_CONTENT_PARSING } from '../../constants/defaults';
+import { collectMarkdownFiles } from '../utils';
 
 export interface BulkStatusChangeOptions {
   transitionId?: string;
@@ -38,7 +40,7 @@ export class BulkStatusChangeService {
   }
 
   async execute(
-    folder: TFolder,
+    target: BulkOperationTarget,
     options: BulkStatusChangeOptions,
     onProgress: StatusChangeProgressCallback,
   ): Promise<BulkStatusChangeResult> {
@@ -50,7 +52,7 @@ export class BulkStatusChangeService {
       failed: [],
     };
 
-    const allFiles = this.collectMarkdownFiles(folder);
+    const allFiles = collectMarkdownFiles(this.app, target);
     const progress: BulkStatusChangeProgress = {
       total: allFiles.length,
       processed: 0,
@@ -131,19 +133,6 @@ export class BulkStatusChangeService {
     onProgress(progress);
 
     return result;
-  }
-
-  private collectMarkdownFiles(folder: TFolder): TFile[] {
-    const files: TFile[] = [];
-    for (const child of folder.children) {
-      if (child instanceof this.app.vault.adapter.constructor) continue;
-      if ('extension' in child && (child as TFile).extension === 'md') {
-        files.push(child as TFile);
-      } else if ('children' in child) {
-        files.push(...this.collectMarkdownFiles(child as TFolder));
-      }
-    }
-    return files;
   }
 
   private async collectNotesToProcess(

@@ -1,4 +1,4 @@
-import { App, TFile, TFolder } from 'obsidian';
+import { App, TFile } from 'obsidian';
 import { BaseModal } from '../base/BaseModal';
 import type { BulkStatusChangeModalOptions, BulkStatusChangeModalResult } from './types';
 import type { JiraTransition, JiraBoard, JiraSprint } from '../../types';
@@ -6,6 +6,7 @@ import { JiraClient } from '../../api/JiraClient';
 import { MappingResolver } from '../../mapping';
 import { parseSummaryFromContent } from '../../utils';
 import { DEFAULT_CONTENT_PARSING } from '../../constants/defaults';
+import { isFolder, collectMarkdownFiles } from '../../services/utils';
 
 interface ModalState {
   instanceId: string;
@@ -64,7 +65,7 @@ export class BulkStatusChangeModal extends BaseModal<BulkStatusChangeModalResult
     contentEl.createEl('h2', { text: 'Bulk Status Change' });
 
     contentEl.createEl('p', {
-      text: `Change status for all Jira tickets in folder: ${this.options.folder.name}`,
+      text: this.getTargetDescription(),
       cls: 'modal-description',
     });
 
@@ -124,7 +125,7 @@ export class BulkStatusChangeModal extends BaseModal<BulkStatusChangeModalResult
     this.updateDisplay();
 
     try {
-      const files = this.collectMarkdownFiles(this.options.folder);
+      const files = collectMarkdownFiles(this.app, this.options.target);
       const firstFileWithIssue = await this.findFirstFileWithIssueId(files);
 
       if (!firstFileWithIssue) {
@@ -146,17 +147,11 @@ export class BulkStatusChangeModal extends BaseModal<BulkStatusChangeModalResult
     }
   }
 
-  private collectMarkdownFiles(folder: TFolder): TFile[] {
-    const files: TFile[] = [];
-    for (const child of folder.children) {
-      if (child instanceof this.app.vault.adapter.constructor) continue;
-      if ('extension' in child && (child as TFile).extension === 'md') {
-        files.push(child as TFile);
-      } else if ('children' in child) {
-        files.push(...this.collectMarkdownFiles(child as TFolder));
-      }
+  private getTargetDescription(): string {
+    if (isFolder(this.options.target)) {
+      return `Change status for all Jira tickets in folder: ${this.options.target.name}`;
     }
-    return files;
+    return `Change status for ${this.options.target.length} selected file${this.options.target.length !== 1 ? 's' : ''}`;
   }
 
   private async findFirstFileWithIssueId(files: TFile[]): Promise<{ file: TFile; issueKey: string } | null> {

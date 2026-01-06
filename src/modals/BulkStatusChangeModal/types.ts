@@ -1,10 +1,10 @@
-import type { TFolder } from 'obsidian';
 import type { JiraInstance, PluginSettings } from '../../types';
+import type { BulkOperationTarget } from '../../services/types';
 
 export interface BulkStatusChangeModalOptions {
   instances: JiraInstance[];
   defaultInstanceId: string;
-  folder: TFolder;
+  target: BulkOperationTarget;
   settings: PluginSettings;
 }
 

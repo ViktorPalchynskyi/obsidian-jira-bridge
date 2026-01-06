@@ -1,11 +1,13 @@
-import type { App, TFile, TFolder } from 'obsidian';
+import type { App, TFile } from 'obsidian';
 import type { PluginSettings, ProjectMappingConfig } from '../../types';
 import type { FrontmatterValues } from '../../modals/CreateTicketModal/types';
 import type { NoteToProcess, SkippedNote, BulkCreateResult, ProgressCallback, BulkCreateProgress } from './types';
+import type { BulkOperationTarget } from '../types';
 import { MappingResolver } from '../../mapping';
 import { BulkCreateCache } from './BulkCreateCache';
 import { parseSummaryFromContent, parseDescriptionFromContent } from '../../utils';
 import { DEFAULT_CONTENT_PARSING } from '../../constants/defaults';
+import { collectMarkdownFiles } from '../utils';
 
 export class BulkCreateService {
   private mappingResolver: MappingResolver;
@@ -24,11 +26,11 @@ export class BulkCreateService {
     this.cancelled = true;
   }
 
-  async execute(folder: TFolder, onProgress: ProgressCallback): Promise<BulkCreateResult> {
+  async execute(target: BulkOperationTarget, onProgress: ProgressCallback): Promise<BulkCreateResult> {
     this.cancelled = false;
     const result: BulkCreateResult = { created: [], skipped: [], failed: [] };
 
-    const allFiles = this.collectMarkdownFiles(folder);
+    const allFiles = collectMarkdownFiles(this.app, target);
     const progress: BulkCreateProgress = {
       total: allFiles.length,
       processed: 0,
@@ -116,22 +118,6 @@ export class BulkCreateService {
     onProgress(progress);
 
     return result;
-  }
-
-  private collectMarkdownFiles(folder: TFolder): TFile[] {
-    const files: TFile[] = [];
-
-    for (const child of folder.children) {
-      if (child instanceof this.app.vault.adapter.constructor) continue;
-
-      if ('extension' in child && (child as TFile).extension === 'md') {
-        files.push(child as TFile);
-      } else if ('children' in child) {
-        files.push(...this.collectMarkdownFiles(child as TFolder));
-      }
-    }
-
-    return files;
   }
 
   private async collectNotesToProcess(

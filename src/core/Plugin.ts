@@ -27,6 +27,8 @@ export class JiraBridgePlugin extends Plugin {
   private mappingResolver!: MappingResolver;
   private statusBar!: StatusBarManager;
   settings!: PluginSettings;
+  private selectedFiles = new Set<TFile>();
+  private lastClickedFile: TFile | null = null;
 
   async onload(): Promise<void> {
     this.container = new ServiceContainer();
@@ -227,6 +229,14 @@ export class JiraBridgePlugin extends Plugin {
     this.registerEvent(
       this.app.workspace.on('file-open', file => {
         this.statusBar.update(file?.path || null);
+
+        if (this.selectedFiles.size > 0) {
+          const firstSelected = Array.from(this.selectedFiles)[0];
+          if (!file || file.parent?.path !== firstSelected.parent?.path) {
+            this.clearSelection();
+          }
+        }
+
         if (file) {
           this.eventBus.emit('file:opened', file);
         }
@@ -252,6 +262,58 @@ export class JiraBridgePlugin extends Plugin {
         }
       }),
     );
+
+    this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
+      const target = evt.target as HTMLElement;
+
+      if (!evt.altKey && !evt.shiftKey) {
+        if (this.selectedFiles.size > 0 && !target.closest('.jira-bridge-selection-counter')) {
+          this.clearSelection();
+        }
+        return;
+      }
+
+      if (evt.shiftKey && !evt.altKey) {
+        setTimeout(() => {
+          this.syncWithObsidianSelection();
+        }, 50);
+        return;
+      }
+
+      const fileItem = target.closest('.tree-item.nav-file');
+      if (!fileItem) return;
+
+      const selfEl = fileItem.querySelector('.tree-item-self');
+      if (!selfEl) return;
+
+      const titleEl = selfEl.querySelector('.tree-item-inner');
+      if (!titleEl) return;
+
+      const fileName = titleEl.textContent?.trim();
+      if (!fileName) return;
+
+      let foundFile: TFile | null = null;
+
+      this.app.vault.getMarkdownFiles().forEach(file => {
+        if (file.basename === fileName || file.name === fileName) {
+          foundFile = file;
+        }
+      });
+
+      if (!foundFile) {
+        new Notice(`File not found: ${fileName}`);
+        return;
+      }
+
+      evt.preventDefault();
+      evt.stopPropagation();
+
+      if (evt.shiftKey) {
+        this.selectFileRange(foundFile);
+      } else {
+        this.toggleFileSelection(foundFile);
+      }
+    });
 
     this.eventBus.on('settings:changed', () => {
       this.mappingResolver.updateSettings(this.settings);
@@ -303,7 +365,7 @@ export class JiraBridgePlugin extends Plugin {
     const modal = new BulkStatusChangeModal(this.app, {
       instances: enabledInstances,
       defaultInstanceId: enabledInstances.find(i => i.isDefault)?.id || enabledInstances[0].id,
-      folder,
+      target: folder,
       settings: this.settings,
     });
 
@@ -398,6 +460,274 @@ export class JiraBridgePlugin extends Plugin {
     } catch {
       // Ignore errors when saving recent issue
     }
+  }
+
+  private async handleBulkCreateFromSelection(files: TFile[]): Promise<void> {
+    const validFiles = files.filter(f => this.app.vault.getAbstractFileByPath(f.path));
+
+    if (validFiles.length < files.length) {
+      new Notice(`${files.length - validFiles.length} file(s) no longer exist`);
+    }
+
+    if (validFiles.length === 0) {
+      new Notice('No valid files to process');
+      return;
+    }
+
+    const service = new BulkCreateService(this.app, this.settings);
+    const progressModal = new BulkCreateProgressModal(this.app);
+
+    progressModal.setOnCancel(() => {
+      service.cancel();
+      progressModal.disableCancel();
+    });
+
+    progressModal.open();
+    this.clearSelection();
+
+    const result = await service.execute(validFiles, progress => {
+      progressModal.updateProgress(progress);
+    });
+
+    for (const created of result.created) {
+      try {
+        await addFrontmatterFields(this.app, created.file, {
+          issue_id: created.issueKey,
+          issue_link: created.issueUrl,
+        });
+      } catch (error) {
+        console.error(`Failed to update frontmatter for ${created.file.name}:`, error);
+      }
+    }
+
+    progressModal.close();
+
+    const reportModal = new BulkCreateReportModal(this.app, result);
+    reportModal.open();
+  }
+
+  private async handleBulkStatusChangeFromSelection(files: TFile[]): Promise<void> {
+    const validFiles = files.filter(f => this.app.vault.getAbstractFileByPath(f.path));
+
+    if (validFiles.length < files.length) {
+      new Notice(`${files.length - validFiles.length} file(s) no longer exist`);
+    }
+
+    if (validFiles.length === 0) {
+      new Notice('No valid files to process');
+      return;
+    }
+
+    const enabledInstances = this.settings.instances.filter(i => i.enabled);
+    if (enabledInstances.length === 0) {
+      new Notice('No Jira instances configured');
+      return;
+    }
+
+    const modal = new BulkStatusChangeModal(this.app, {
+      instances: enabledInstances,
+      defaultInstanceId: enabledInstances.find(i => i.isDefault)?.id || enabledInstances[0].id,
+      target: validFiles,
+      settings: this.settings,
+    });
+
+    const selection = await modal.open();
+    if (!selection) return;
+
+    this.clearSelection();
+
+    const service = new BulkStatusChangeService(this.app, this.settings, selection.instanceId);
+    const progressModal = new BulkStatusChangeProgressModal(this.app);
+
+    progressModal.setOnCancel(() => {
+      service.cancel();
+      progressModal.disableCancel();
+    });
+
+    progressModal.open();
+
+    const result = await service.execute(validFiles, selection, progress => {
+      progressModal.updateProgress(progress);
+    });
+
+    progressModal.close();
+
+    const reportModal = new BulkStatusChangeReportModal(this.app, result);
+    reportModal.open();
+  }
+
+  private toggleFileSelection(file: TFile): void {
+    const existingFile = Array.from(this.selectedFiles).find(f => f.path === file.path);
+
+    if (existingFile) {
+      this.selectedFiles.delete(existingFile);
+      this.removeFileSelectionVisual(file);
+    } else {
+      if (this.selectedFiles.size >= 100) {
+        new Notice('Maximum 100 files can be selected');
+        return;
+      }
+      this.selectedFiles.add(file);
+      this.addFileSelectionVisual(file);
+    }
+    this.lastClickedFile = file;
+    this.updateSelectionCounter();
+  }
+
+  private selectFileRange(endFile: TFile): void {
+    if (!this.lastClickedFile) {
+      this.toggleFileSelection(endFile);
+      return;
+    }
+
+    if (this.lastClickedFile.parent?.path !== endFile.parent?.path) {
+      new Notice('Range selection only works within the same folder');
+      return;
+    }
+
+    const parent = endFile.parent;
+    if (!parent) return;
+
+    const files = parent.children.filter(f => f instanceof TFile && f.extension === 'md') as TFile[];
+
+    const startIndex = files.findIndex(f => f.path === this.lastClickedFile!.path);
+    const endIndex = files.findIndex(f => f.path === endFile.path);
+
+    console.log('Range selection debug:', {
+      lastClickedFile: this.lastClickedFile.path,
+      endFile: endFile.path,
+      totalFiles: files.length,
+      startIndex,
+      endIndex,
+      currentSelection: this.selectedFiles.size,
+    });
+
+    if (startIndex === -1 || endIndex === -1) return;
+
+    const [min, max] = startIndex < endIndex ? [startIndex, endIndex] : [endIndex, startIndex];
+    const rangeFiles = files.slice(min, max + 1);
+
+    console.log(
+      'Range files:',
+      rangeFiles.map(f => f.name),
+      'count:',
+      rangeFiles.length,
+    );
+
+    const spaceAvailable = 100 - this.selectedFiles.size;
+    const filesToAdd = rangeFiles.filter(f => !Array.from(this.selectedFiles).some(sf => sf.path === f.path)).slice(0, spaceAvailable);
+
+    console.log(
+      'Files to add:',
+      filesToAdd.map(f => f.name),
+      'count:',
+      filesToAdd.length,
+    );
+
+    if (filesToAdd.length < rangeFiles.filter(f => !Array.from(this.selectedFiles).some(sf => sf.path === f.path)).length) {
+      new Notice('Maximum 100 files can be selected. Only some files were added.');
+    }
+
+    for (const file of filesToAdd) {
+      this.selectedFiles.add(file);
+      this.addFileSelectionVisual(file);
+    }
+
+    console.log('After adding, selection size:', this.selectedFiles.size);
+
+    this.lastClickedFile = endFile;
+    this.updateSelectionCounter();
+  }
+
+  private addFileSelectionVisual(file: TFile): void {
+    const fileExplorer = document.querySelector('.nav-files-container');
+    if (!fileExplorer) return;
+
+    const element = fileExplorer.querySelector(`[data-path="${file.path}"]`);
+    if (element) {
+      element.addClass('jira-bridge-file-selected');
+    }
+  }
+
+  private removeFileSelectionVisual(file: TFile): void {
+    const fileExplorer = document.querySelector('.nav-files-container');
+    if (!fileExplorer) return;
+
+    const element = fileExplorer.querySelector(`[data-path="${file.path}"]`);
+    if (element) {
+      element.removeClass('jira-bridge-file-selected');
+    }
+  }
+
+  private clearSelection(): void {
+    for (const file of this.selectedFiles) {
+      this.removeFileSelectionVisual(file);
+    }
+    this.selectedFiles.clear();
+    this.lastClickedFile = null;
+    this.updateSelectionCounter();
+  }
+
+  private syncWithObsidianSelection(): void {
+    const selectedItems = document.querySelectorAll('.nav-file-title.is-selected, .tree-item.is-selected');
+
+    this.clearSelection();
+
+    selectedItems.forEach(item => {
+      const titleEl = item.querySelector('.tree-item-inner') || item;
+      const fileName = titleEl.textContent?.trim();
+      if (!fileName) return;
+
+      this.app.vault.getMarkdownFiles().forEach(file => {
+        if (file.basename === fileName || file.name === fileName) {
+          const notAlreadySelected = !Array.from(this.selectedFiles).some(f => f.path === file.path);
+          if (notAlreadySelected) {
+            this.selectedFiles.add(file);
+            this.addFileSelectionVisual(file);
+          }
+        }
+      });
+    });
+
+    this.updateSelectionCounter();
+  }
+
+  private updateSelectionCounter(): void {
+    let counter = document.querySelector('.jira-bridge-selection-counter') as HTMLElement;
+
+    if (this.selectedFiles.size === 0) {
+      counter?.remove();
+      return;
+    }
+
+    if (!counter) {
+      counter = document.body.createDiv('jira-bridge-selection-counter');
+    }
+
+    counter.empty();
+
+    const header = counter.createDiv('selection-counter-header');
+    header.setText(`${this.selectedFiles.size} file${this.selectedFiles.size !== 1 ? 's' : ''} selected`);
+
+    const actions = counter.createDiv('selection-counter-actions');
+
+    const createBtn = actions.createEl('button', { cls: 'selection-action-btn' });
+    createBtn.setText('Create Tickets');
+    createBtn.addEventListener('click', () => {
+      this.handleBulkCreateFromSelection(Array.from(this.selectedFiles));
+    });
+
+    const statusBtn = actions.createEl('button', { cls: 'selection-action-btn' });
+    statusBtn.setText('Change Status');
+    statusBtn.addEventListener('click', () => {
+      this.handleBulkStatusChangeFromSelection(Array.from(this.selectedFiles));
+    });
+
+    const clearBtn = actions.createEl('button', { cls: 'selection-action-btn selection-clear-btn' });
+    clearBtn.setText('Clear');
+    clearBtn.addEventListener('click', () => {
+      this.clearSelection();
+    });
   }
 
   private openSettings(): void {

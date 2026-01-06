@@ -20,6 +20,7 @@ export default [
         process: 'readonly',
         module: 'readonly',
         require: 'readonly',
+        document: 'readonly',
         HTMLElement: 'readonly',
         HTMLInputElement: 'readonly',
         HTMLSpanElement: 'readonly',

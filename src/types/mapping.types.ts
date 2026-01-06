@@ -1,4 +1,5 @@
 import type { JiraInstance, JiraProject } from './jira.types';
+import type { SyncFieldConfig } from './settings.types';
 
 export type MappingType = 'instance' | 'project';
 
@@ -19,9 +20,15 @@ export interface ContentParsingConfig {
   descriptionFlags: string;
 }
 
+export interface ProjectSyncConfig {
+  enableSync: boolean;
+  syncFields?: SyncFieldConfig[];
+}
+
 export interface ProjectMappingConfig {
   frontmatterMappings: FrontmatterFieldMapping[];
   contentParsing: ContentParsingConfig;
+  syncConfig?: ProjectSyncConfig;
 }
 
 export interface FolderMapping {

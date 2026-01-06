@@ -30,12 +30,20 @@ export interface CustomFieldConfig {
   projectKey?: string;
 }
 
+export interface SyncFieldConfig {
+  jiraField: string;
+  frontmatterKey: string;
+  enabled: boolean;
+  readOnly: boolean;
+}
+
 export interface SyncSettings {
   autoSync: boolean;
   syncInterval: number;
   syncOnFileOpen: boolean;
   updateFrontmatter: boolean;
   frontmatterFields: FrontmatterFieldConfig[];
+  syncFields: SyncFieldConfig[];
 }
 
 export interface UISettings {

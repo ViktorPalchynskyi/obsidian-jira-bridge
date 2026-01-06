@@ -24,6 +24,14 @@ export const DEFAULT_SETTINGS: PluginSettings = {
       { jiraField: 'status', frontmatterKey: 'jira_status', enabled: true, readOnly: true },
       { jiraField: 'assignee', frontmatterKey: 'jira_assignee', enabled: true, readOnly: true },
     ],
+    syncFields: [
+      { jiraField: 'status', frontmatterKey: 'jira_status', enabled: true, readOnly: true },
+      { jiraField: 'assignee', frontmatterKey: 'jira_assignee', enabled: true, readOnly: true },
+      { jiraField: 'priority', frontmatterKey: 'jira_priority', enabled: true, readOnly: true },
+      { jiraField: 'updated', frontmatterKey: 'jira_updated', enabled: false, readOnly: true },
+      { jiraField: 'reporter', frontmatterKey: 'jira_reporter', enabled: false, readOnly: true },
+      { jiraField: 'summary', frontmatterKey: 'jira_summary', enabled: false, readOnly: true },
+    ],
   },
   ui: {
     showRibbonIcon: true,

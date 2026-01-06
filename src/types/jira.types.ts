@@ -145,3 +145,8 @@ export interface JiraSprintInfo {
   sprint: JiraSprint | null;
   inBacklog: boolean;
 }
+
+export interface JiraIssueData {
+  key: string;
+  fields: Record<string, unknown>;
+}

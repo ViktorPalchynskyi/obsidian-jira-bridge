@@ -14,6 +14,8 @@ export interface SyncResult {
   ticketKey: string;
   changes: SyncChange[];
   error?: Error;
+  skipped?: boolean;
+  skipReason?: string;
 }
 
 export interface SyncChange {
@@ -21,6 +23,15 @@ export interface SyncChange {
   oldValue: unknown;
   newValue: unknown;
   direction: 'toJira' | 'fromJira';
+  frontmatterKey: string;
+}
+
+export interface SyncStats {
+  total: number;
+  synced: number;
+  skipped: number;
+  failed: number;
+  changes: number;
 }
 
 export interface FrontmatterData {

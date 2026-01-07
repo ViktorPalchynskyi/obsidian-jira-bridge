@@ -21,6 +21,7 @@ import type { RecentIssue } from '../modals';
 import { parseSummaryFromContent, parseDescriptionFromContent, addFrontmatterFields, readFrontmatterField } from '../utils';
 import { BulkCreateService } from '../services/bulkCreate';
 import { BulkStatusChangeService } from '../services/bulkStatusChange';
+import { SyncService } from '../services/sync';
 
 export class JiraBridgePlugin extends Plugin {
   private container!: ServiceContainer;
@@ -40,9 +41,21 @@ export class JiraBridgePlugin extends Plugin {
     this.initializeUI();
     this.registerCommands();
     this.setupEventListeners();
+
+    const syncService = this.container.get<SyncService>({ name: 'SyncService' });
+    if (this.settings.sync.autoSync) {
+      syncService.startAutoSync();
+    }
   }
 
   async onunload(): Promise<void> {
+    try {
+      const syncService = this.container.get<SyncService>({ name: 'SyncService' });
+      syncService.stopAutoSync();
+    } catch {
+      // Service might not be registered
+    }
+
     this.eventBus.clear();
     this.container.dispose();
   }
@@ -66,6 +79,9 @@ export class JiraBridgePlugin extends Plugin {
 
   private registerServices(): void {
     this.container.register({ name: 'EventBus' }, this.eventBus);
+
+    const syncService = new SyncService(this.app, this.settings, this.eventBus);
+    this.container.register({ name: 'SyncService' }, syncService);
   }
 
   private initializeUI(): void {
@@ -234,7 +250,7 @@ export class JiraBridgePlugin extends Plugin {
 
   private setupEventListeners(): void {
     this.registerEvent(
-      this.app.workspace.on('file-open', file => {
+      this.app.workspace.on('file-open', async file => {
         this.statusBar.update(file?.path || null);
 
         if (this.selectedFiles.size > 0) {
@@ -242,6 +258,11 @@ export class JiraBridgePlugin extends Plugin {
           if (!file || file.parent?.path !== firstSelected.parent?.path) {
             this.clearSelection();
           }
+        }
+
+        if (file && this.settings.sync.syncOnFileOpen) {
+          const syncService = this.container.get<SyncService>({ name: 'SyncService' });
+          await syncService.syncNote(file, { silent: true });
         }
 
         if (file) {
@@ -322,9 +343,20 @@ export class JiraBridgePlugin extends Plugin {
       }
     });
 
+    this.eventBus.on('sync:complete', () => {
+      const activeFile = this.app.workspace.getActiveFile();
+      if (activeFile) {
+        this.statusBar.update(activeFile.path);
+      }
+    });
+
     this.eventBus.on('settings:changed', () => {
       this.mappingResolver.updateSettings(this.settings);
       this.statusBar.updateSettings(this.settings.ui);
+
+      const syncService = this.container.get<SyncService>({ name: 'SyncService' });
+      syncService.updateSettings(this.settings);
+
       const activeFile = this.app.workspace.getActiveFile();
       this.statusBar.update(activeFile?.path || null);
     });

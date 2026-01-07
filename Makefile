@@ -1,70 +1,78 @@
-.PHONY: dev build test lint typecheck clean docker-build docker-dev ci install setup format install-plugin
+.PHONY: dev build test lint typecheck clean docker-build docker-dev ci install setup format install-plugin help
+
+-include .env
 
 VAULT_PATH ?= $(HOME)/Live/notes
 PLUGIN_DIR = $(VAULT_PATH)/.obsidian/plugins/obsidian-jira-bridge
 
-dev:
+help: ## Show this help
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Targets:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-20s %s\n", $$1, $$2}'
+
+dev: ## Start development mode with hot reload
 	pnpm dev
 
-build:
+build: ## Build for production
 	pnpm build
 
-build-styles:
+build-styles: ## Build styles only
 	pnpm build:styles
 
-test:
+test: ## Run tests
 	pnpm test
 
-test-watch:
+test-watch: ## Run tests in watch mode
 	pnpm test:watch
 
-test-coverage:
+test-coverage: ## Run tests with coverage
 	pnpm test:coverage
 
-lint:
+lint: ## Run linter
 	pnpm lint
 
-lint-fix:
+lint-fix: ## Run linter and fix issues
 	pnpm lint:fix
 
-format:
+format: ## Format code
 	pnpm format
 
-format-check:
+format-check: ## Check code formatting
 	pnpm format:check
 
-typecheck:
+typecheck: ## Run TypeScript type checking
 	pnpm typecheck
 
-clean:
+clean: ## Remove dist and node_modules
 	rm -rf dist node_modules
 
-ci: format-check lint typecheck test build
+ci: format-check lint typecheck test build ## Run all CI checks
 	@echo "All CI checks passed"
 
-docker-build:
+docker-build: ## Build Docker image
 	docker-compose build
 
-docker-dev:
+docker-dev: ## Start development in Docker
 	docker-compose up dev
 
-docker-test:
+docker-test: ## Run tests in Docker
 	docker-compose run --rm dev pnpm test
 
-docker-lint:
+docker-lint: ## Run linter in Docker
 	docker-compose run --rm dev pnpm lint
 
-docker-ci:
+docker-ci: ## Run CI checks in Docker
 	docker-compose run --rm dev make ci
 
-install:
+install: ## Install dependencies
 	pnpm install
 
-setup: install
+setup: install ## Setup project (install + create dist)
 	mkdir -p dist
 	cp manifest.json dist/ 2>/dev/null || true
 
-install-plugin: build
+install-plugin: build ## Build and install plugin to Obsidian vault
 	@echo "Installing plugin to $(PLUGIN_DIR)"
 	@mkdir -p "$(PLUGIN_DIR)"
 	@cp dist/main.js "$(PLUGIN_DIR)/"

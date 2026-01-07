@@ -1,11 +1,14 @@
+import { TFile } from 'obsidian';
 import type { Plugin } from 'obsidian';
 import type { MappingResolver } from '../mapping/MappingResolver';
 import type { UISettings } from '../types';
+import { readFrontmatterField } from '../utils/frontmatter';
 
 export class StatusBarManager {
   private plugin: Plugin;
   private instanceItem: HTMLElement | null = null;
   private projectItem: HTMLElement | null = null;
+  private statusItem: HTMLElement | null = null;
   private resolver: MappingResolver;
   private onClickCallback: () => void;
   private settings: UISettings;
@@ -38,6 +41,30 @@ export class StatusBarManager {
       }
       this.projectItem.setText(projectText);
     }
+
+    if (this.statusItem) {
+      if (filePath) {
+        const file = (this.plugin as any).app.vault.getAbstractFileByPath(filePath);
+        if (file instanceof TFile) {
+          const issueKey = readFrontmatterField((this.plugin as any).app, file, 'issue_id');
+          const status = readFrontmatterField((this.plugin as any).app, file, 'jira_status');
+
+          if (issueKey && status) {
+            this.statusItem.setText(`Status: ${status}`);
+            this.statusItem.style.display = 'inline-block';
+          } else if (issueKey) {
+            this.statusItem.setText(`Status: Not synced`);
+            this.statusItem.style.display = 'inline-block';
+          } else {
+            this.statusItem.style.display = 'none';
+          }
+        } else {
+          this.statusItem.style.display = 'none';
+        }
+      } else {
+        this.statusItem.style.display = 'none';
+      }
+    }
   }
 
   setResolver(resolver: MappingResolver): void {
@@ -63,6 +90,14 @@ export class StatusBarManager {
       this.projectItem.setText('Project: None');
       this.projectItem.addEventListener('click', () => this.onClickCallback());
     }
+
+    if (this.settings.showStatusBarInstance) {
+      this.statusItem = this.plugin.addStatusBarItem();
+      this.statusItem.addClass('jira-bridge-status', 'jira-bridge-status-ticket');
+      this.statusItem.setText('Status: None');
+      this.statusItem.style.display = 'none';
+      this.statusItem.addEventListener('click', () => this.onClickCallback());
+    }
   }
 
   private recreateStatusBarItems(): void {
@@ -73,6 +108,10 @@ export class StatusBarManager {
     if (this.projectItem) {
       this.projectItem.remove();
       this.projectItem = null;
+    }
+    if (this.statusItem) {
+      this.statusItem.remove();
+      this.statusItem = null;
     }
     this.createStatusBarItems();
   }

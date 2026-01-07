@@ -1,10 +1,10 @@
-import { TFile } from 'obsidian';
-import type { Plugin } from 'obsidian';
+import { TFile, App, Plugin } from 'obsidian';
 import type { MappingResolver } from '../mapping/MappingResolver';
 import type { UISettings } from '../types';
 import { readFrontmatterField } from '../utils/frontmatter';
 
 export class StatusBarManager {
+  private app: App;
   private plugin: Plugin;
   private instanceItem: HTMLElement | null = null;
   private projectItem: HTMLElement | null = null;
@@ -13,7 +13,8 @@ export class StatusBarManager {
   private onClickCallback: () => void;
   private settings: UISettings;
 
-  constructor(plugin: Plugin, resolver: MappingResolver, settings: UISettings, onClick: () => void) {
+  constructor(app: App, plugin: Plugin, resolver: MappingResolver, settings: UISettings, onClick: () => void) {
+    this.app = app;
     this.plugin = plugin;
     this.resolver = resolver;
     this.settings = settings;
@@ -44,10 +45,10 @@ export class StatusBarManager {
 
     if (this.statusItem) {
       if (filePath) {
-        const file = (this.plugin as any).app.vault.getAbstractFileByPath(filePath);
+        const file = this.app.vault.getAbstractFileByPath(filePath);
         if (file instanceof TFile) {
-          const issueKey = readFrontmatterField((this.plugin as any).app, file, 'issue_id');
-          const status = readFrontmatterField((this.plugin as any).app, file, 'jira_status');
+          const issueKey = readFrontmatterField(this.app, file, 'issue_id');
+          const status = readFrontmatterField(this.app, file, 'jira_status');
 
           if (issueKey && status) {
             this.statusItem.setText(`Status: ${status}`);

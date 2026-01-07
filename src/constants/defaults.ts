@@ -16,8 +16,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   instances: [],
   mappings: [],
   sync: {
-    autoSync: true,
-    syncInterval: 5,
+    autoSync: false,
+    syncInterval: 1,
     syncOnFileOpen: true,
     updateFrontmatter: true,
     frontmatterFields: [

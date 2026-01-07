@@ -300,7 +300,7 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
 
     try {
       const issue = await this.client.getIssue(this.state.issueKey, ['summary', 'status']);
-      this.state.currentStatus = issue.fields.status as any;
+      this.state.currentStatus = issue.fields.status as JiraStatus | null;
       this.state.issueSummary = String(issue.fields.summary || '');
       this.state.issueKey = issue.key;
 

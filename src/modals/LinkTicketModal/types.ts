@@ -9,6 +9,7 @@ export interface LinkTicketModalOptions {
 export interface LinkTicketModalResult {
   issueKey: string;
   instanceId: string;
+  action: 'link' | 'sync';
 }
 
 export interface SearchIssueResult {

@@ -43,7 +43,7 @@ export class JiraBridgePlugin extends Plugin {
     this.setupEventListeners();
 
     const syncService = this.container.get<SyncService>({ name: 'SyncService' });
-    if (this.settings.sync.autoSync) {
+    if (this.settings.sync?.autoSync) {
       syncService.startAutoSync();
     }
   }
@@ -69,7 +69,27 @@ export class JiraBridgePlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const savedData = await this.loadData();
+    this.settings = {
+      ...DEFAULT_SETTINGS,
+      ...savedData,
+      sync: {
+        ...DEFAULT_SETTINGS.sync,
+        ...(savedData?.sync ?? {}),
+      },
+      ui: {
+        ...DEFAULT_SETTINGS.ui,
+        ...(savedData?.ui ?? {}),
+      },
+      advanced: {
+        ...DEFAULT_SETTINGS.advanced,
+        ...(savedData?.advanced ?? {}),
+      },
+      createTicket: {
+        ...DEFAULT_SETTINGS.createTicket,
+        ...(savedData?.createTicket ?? {}),
+      },
+    };
   }
 
   async saveSettings(): Promise<void> {
@@ -92,7 +112,7 @@ export class JiraBridgePlugin extends Plugin {
     });
 
     this.mappingResolver = new MappingResolver(this.settings);
-    this.statusBar = new StatusBarManager(this, this.mappingResolver, this.settings.ui, () => this.openSettings());
+    this.statusBar = new StatusBarManager(this.app, this, this.mappingResolver, this.settings.ui, () => this.openSettings());
 
     const activeFile = this.app.workspace.getActiveFile();
     this.statusBar.update(activeFile?.path || null);
@@ -123,6 +143,18 @@ export class JiraBridgePlugin extends Plugin {
       id: 'link-existing-ticket',
       name: 'Link existing Jira ticket',
       callback: () => this.openLinkTicketModal(),
+    });
+
+    this.addCommand({
+      id: 'sync-current-note',
+      name: 'Sync current note with Jira',
+      callback: () => this.syncCurrentNote(),
+    });
+
+    this.addCommand({
+      id: 'sync-open-notes',
+      name: 'Sync all open notes with Jira',
+      callback: () => this.syncOpenNotes(),
     });
   }
 
@@ -260,7 +292,7 @@ export class JiraBridgePlugin extends Plugin {
           }
         }
 
-        if (file && this.settings.sync.syncOnFileOpen) {
+        if (file && this.settings.sync?.syncOnFileOpen) {
           const syncService = this.container.get<SyncService>({ name: 'SyncService' });
           await syncService.syncNote(file, { silent: true });
         }
@@ -494,6 +526,22 @@ export class JiraBridgePlugin extends Plugin {
     const result = await modal.open();
 
     if (result) {
+      if (result.action === 'sync') {
+        const syncService = this.container.get<SyncService>({ name: 'SyncService' });
+        const syncResult = await syncService.syncNote(activeFile, { force: true });
+
+        if (syncResult.success) {
+          if (syncResult.changes.length > 0) {
+            new Notice(`Synced ${result.issueKey}: ${syncResult.changes.length} field(s) updated`);
+          } else {
+            new Notice(`${result.issueKey} is up to date`);
+          }
+        } else {
+          new Notice(`Failed to sync: ${syncResult.error || 'Unknown error'}`);
+        }
+        return;
+      }
+
       const instance = enabledInstances.find(i => i.id === result.instanceId);
       if (!instance) return;
 
@@ -504,7 +552,14 @@ export class JiraBridgePlugin extends Plugin {
         issue_link: issueUrl,
       });
 
-      new Notice(`Linked to ${result.issueKey}`);
+      const syncService = this.container.get<SyncService>({ name: 'SyncService' });
+      const syncResult = await syncService.syncNote(activeFile, { force: true });
+
+      if (syncResult.success && syncResult.changes.length > 0) {
+        new Notice(`Linked to ${result.issueKey}, synced ${syncResult.changes.length} field(s)`);
+      } else {
+        new Notice(`Linked to ${result.issueKey}`);
+      }
     }
   }
 
@@ -538,6 +593,57 @@ export class JiraBridgePlugin extends Plugin {
     } catch {
       // Ignore errors when saving recent issue
     }
+  }
+
+  private async syncCurrentNote(): Promise<void> {
+    const activeFile = this.app.workspace.getActiveFile();
+    if (!activeFile) {
+      new Notice('No active file');
+      return;
+    }
+
+    try {
+      const syncService = this.container.get<SyncService>({ name: 'SyncService' });
+      const result = await syncService.syncNote(activeFile, { force: true });
+
+      if (result.skipped) {
+        if (result.skipReason === 'no_issue_id') {
+          new Notice('No issue linked to this note');
+        } else if (result.skipReason === 'no_instance_mapping') {
+          new Notice('No Jira instance configured for this folder');
+        } else if (result.skipReason === 'sync_disabled') {
+          new Notice('Sync is disabled. Enable it in Advanced Config.');
+        } else {
+          new Notice(`Sync skipped: ${result.skipReason}`);
+        }
+        return;
+      }
+
+      if (result.success) {
+        if (result.changes.length > 0) {
+          new Notice(`Synced ${result.ticketKey}: ${result.changes.length} field(s) updated`);
+        } else {
+          new Notice(`${result.ticketKey} is up to date`);
+        }
+      } else {
+        new Notice(`Failed to sync: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      new Notice(`Sync error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private async syncOpenNotes(): Promise<void> {
+    const syncService = this.container.get<SyncService>({ name: 'SyncService' });
+    const stats = await syncService.syncAllOpenNotes({ force: true });
+
+    if (stats.total === 0) {
+      new Notice('No open notes with linked issues');
+      return;
+    }
+
+    new Notice(`Synced ${stats.synced}/${stats.total} notes, ${stats.changes} field(s) updated`);
   }
 
   private async handleBulkCreateFromSelection(files: TFile[]): Promise<void> {
@@ -671,36 +777,13 @@ export class JiraBridgePlugin extends Plugin {
     const startIndex = files.findIndex(f => f.path === this.lastClickedFile!.path);
     const endIndex = files.findIndex(f => f.path === endFile.path);
 
-    console.log('Range selection debug:', {
-      lastClickedFile: this.lastClickedFile.path,
-      endFile: endFile.path,
-      totalFiles: files.length,
-      startIndex,
-      endIndex,
-      currentSelection: this.selectedFiles.size,
-    });
-
     if (startIndex === -1 || endIndex === -1) return;
 
     const [min, max] = startIndex < endIndex ? [startIndex, endIndex] : [endIndex, startIndex];
     const rangeFiles = files.slice(min, max + 1);
 
-    console.log(
-      'Range files:',
-      rangeFiles.map(f => f.name),
-      'count:',
-      rangeFiles.length,
-    );
-
     const spaceAvailable = 100 - this.selectedFiles.size;
     const filesToAdd = rangeFiles.filter(f => !Array.from(this.selectedFiles).some(sf => sf.path === f.path)).slice(0, spaceAvailable);
-
-    console.log(
-      'Files to add:',
-      filesToAdd.map(f => f.name),
-      'count:',
-      filesToAdd.length,
-    );
 
     if (filesToAdd.length < rangeFiles.filter(f => !Array.from(this.selectedFiles).some(sf => sf.path === f.path)).length) {
       new Notice('Maximum 100 files can be selected. Only some files were added.');
@@ -710,8 +793,6 @@ export class JiraBridgePlugin extends Plugin {
       this.selectedFiles.add(file);
       this.addFileSelectionVisual(file);
     }
-
-    console.log('After adding, selection size:', this.selectedFiles.size);
 
     this.lastClickedFile = endFile;
     this.updateSelectionCounter();

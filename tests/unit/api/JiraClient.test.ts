@@ -196,8 +196,9 @@ describe('JiraClient', () => {
       const result = await client.getIssue('TEST-123');
 
       expect(result.key).toBe('TEST-123');
-      expect(result.summary).toBe('Test Issue');
-      expect(result.status.name).toBe('In Progress');
+      expect(result.fields.summary).toBe('Test Issue');
+      const status = result.fields.status as { name: string };
+      expect(status.name).toBe('In Progress');
     });
 
     it('should throw error for 404', async () => {

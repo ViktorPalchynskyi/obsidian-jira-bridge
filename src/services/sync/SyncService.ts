@@ -1,4 +1,4 @@
-import { App, TFile, TFolder, Notice } from 'obsidian';
+import { App, TFile, TFolder, Notice, FileView } from 'obsidian';
 import type { PluginSettings, SyncFieldConfig, SyncResult, SyncStats, SyncChange } from '../../types';
 import type { SyncOptions, SyncCache, SyncContext } from './types';
 import type { ResolvedContext } from '../../types/mapping.types';
@@ -7,7 +7,6 @@ import { JiraClient } from '../../api/JiraClient';
 import type { EventBus } from '../../core/EventBus';
 import { addFrontmatterFields } from '../../utils/frontmatter';
 
-const CACHE_TTL = 120000;
 const MAX_CACHE_SIZE = 100;
 
 export class SyncService {
@@ -133,9 +132,8 @@ export class SyncService {
     const openFiles: TFile[] = [];
 
     this.app.workspace.iterateAllLeaves(leaf => {
-      const file = (leaf.view as any).file;
-      if (file instanceof TFile && file.extension === 'md') {
-        openFiles.push(file);
+      if (leaf.view instanceof FileView && leaf.view.file instanceof TFile && leaf.view.file.extension === 'md') {
+        openFiles.push(leaf.view.file);
       }
     });
 
@@ -210,16 +208,18 @@ export class SyncService {
       return;
     }
 
-    const intervalMs = this.settings.sync.syncInterval * 60 * 1000;
+    const intervalMs = (this.settings.sync?.syncInterval ?? 1) * 60 * 1000;
 
-    this.intervalId = window.setInterval(async () => {
-      await this.syncAllOpenNotes({ silent: true });
-    }, intervalMs);
+    // eslint-disable-next-line no-undef
+    this.intervalId = setInterval(async () => {
+      await this.syncAllOpenNotes({ silent: true, force: true });
+    }, intervalMs) as unknown as number;
   }
 
   stopAutoSync(): void {
     if (this.intervalId !== null) {
-      window.clearInterval(this.intervalId);
+      // eslint-disable-next-line no-undef
+      clearInterval(this.intervalId);
       this.intervalId = null;
     }
   }
@@ -227,6 +227,11 @@ export class SyncService {
   updateSettings(settings: PluginSettings): void {
     this.settings = settings;
     this.mappingResolver.updateSettings(settings);
+
+    this.clients.clear();
+    for (const instance of settings.instances.filter(i => i.enabled)) {
+      this.clients.set(instance.id, new JiraClient(instance));
+    }
 
     if (this.intervalId !== null) {
       this.stopAutoSync();
@@ -236,10 +241,15 @@ export class SyncService {
     }
   }
 
-  private async performSync(context: SyncContext, options: SyncOptions): Promise<SyncResult> {
-    const client = this.clients.get(context.instanceId);
+  private async performSync(context: SyncContext, _options: SyncOptions): Promise<SyncResult> {
+    let client = this.clients.get(context.instanceId);
     if (!client) {
-      throw new Error('Jira client not found');
+      const instance = this.settings.instances.find(i => i.id === context.instanceId && i.enabled);
+      if (!instance) {
+        throw new Error('Jira instance not found or disabled');
+      }
+      client = new JiraClient(instance);
+      this.clients.set(context.instanceId, client);
     }
 
     const fieldNames = context.syncFields.map(f => f.jiraField);
@@ -296,7 +306,10 @@ export class SyncService {
       }
     }
 
-    return this.settings.sync.syncFields.filter(f => f.enabled);
+    const defaultSyncFields: SyncFieldConfig[] = [{ jiraField: 'status', frontmatterKey: 'jira_status', enabled: false, readOnly: true }];
+
+    const syncFields = this.settings.sync?.syncFields ?? defaultSyncFields;
+    return syncFields.filter(f => f.enabled);
   }
 
   private extractFieldValue(fields: Record<string, unknown>, jiraField: string): string | null {
@@ -323,8 +336,9 @@ export class SyncService {
     const cached = this.cache.get(issueKey);
     if (!cached) return false;
 
+    const cacheTTL = (this.settings.sync?.syncInterval ?? 1) * 60 * 1000;
     const age = Date.now() - cached.lastSyncAt;
-    return age < CACHE_TTL;
+    return age < cacheTTL;
   }
 
   private updateCache(issueKey: string, data: Record<string, unknown>): void {

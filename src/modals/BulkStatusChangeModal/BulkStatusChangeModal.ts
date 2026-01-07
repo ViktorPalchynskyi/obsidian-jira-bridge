@@ -136,7 +136,8 @@ export class BulkStatusChangeModal extends BaseModal<BulkStatusChangeModalResult
       this.state.sampleIssueKey = firstFileWithIssue.issueKey;
 
       const issue = await this.client.getIssue(this.state.sampleIssueKey, ['status']);
-      this.state.currentStatus = (issue.fields.status as any)?.name || '';
+      const status = issue.fields.status as { name?: string } | undefined;
+      this.state.currentStatus = status?.name || '';
 
       await Promise.all([this.loadTransitions(), this.loadSprintInfo()]);
     } catch (error) {

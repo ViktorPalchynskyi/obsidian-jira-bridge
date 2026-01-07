@@ -23,26 +23,13 @@ export class AdvancedConfigModal extends BaseModal<null> {
       cls: 'modal-subtitle',
     });
 
-    this.renderSection(
-      contentEl,
-      '📋 Frontmatter Mapping',
-      'Configure how frontmatter fields are mapped to Jira fields',
-      () => this.openMappingModal(),
+    this.renderSection(contentEl, '📋 Frontmatter Mapping', 'Configure how frontmatter fields are mapped to Jira fields', () =>
+      this.openMappingModal(),
     );
 
-    this.renderSection(
-      contentEl,
-      '🏷️  Custom Fields',
-      'Add and manage custom Jira fields for this project',
-      () => this.openFieldsModal(),
-    );
+    this.renderSection(contentEl, '🏷️  Custom Fields', 'Add and manage custom Jira fields for this project', () => this.openFieldsModal());
 
-    this.renderSection(
-      contentEl,
-      '🔄 Sync Settings',
-      'Configure automatic synchronization from Jira',
-      () => this.openSyncModal(),
-    );
+    this.renderSection(contentEl, '🔄 Sync Settings', 'Configure automatic synchronization from Jira', () => this.openSyncModal());
 
     this.renderButtons(contentEl);
   }

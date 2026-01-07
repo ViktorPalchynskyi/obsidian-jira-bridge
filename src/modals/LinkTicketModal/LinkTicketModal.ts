@@ -61,6 +61,12 @@ export class LinkTicketModal extends BaseModal<LinkTicketModalResult> {
     this.renderSearchInput(contentEl);
     this.resultsContainer = contentEl.createEl('div', { cls: 'search-results' });
     this.renderButtons(contentEl);
+
+    if (this.options.currentIssueKey && this.searchInput) {
+      this.searchInput.value = this.options.currentIssueKey;
+      this.state.searchQuery = this.options.currentIssueKey;
+      this.performSearch();
+    }
   }
 
   private renderInstanceSelector(container: HTMLElement): void {
@@ -195,8 +201,16 @@ export class LinkTicketModal extends BaseModal<LinkTicketModalResult> {
       this.cancel();
     });
 
+    if (this.options.currentIssueKey) {
+      const syncButton = buttonContainer.createEl('button', {
+        text: 'Sync',
+        cls: 'modal-button',
+      });
+      syncButton.addEventListener('click', () => this.handleSync());
+    }
+
     this.linkButton = buttonContainer.createEl('button', {
-      text: 'Link',
+      text: 'Link & Sync',
       cls: 'modal-button mod-cta',
     });
     this.linkButton.disabled = true;
@@ -216,6 +230,17 @@ export class LinkTicketModal extends BaseModal<LinkTicketModalResult> {
     this.submit({
       issueKey: this.state.selectedIssueKey,
       instanceId: this.state.selectedInstanceId,
+      action: 'link',
+    });
+  }
+
+  private handleSync(): void {
+    if (!this.options.currentIssueKey) return;
+
+    this.submit({
+      issueKey: this.options.currentIssueKey,
+      instanceId: this.state.selectedInstanceId,
+      action: 'sync',
     });
   }
 }

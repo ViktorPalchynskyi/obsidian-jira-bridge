@@ -25,6 +25,7 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
     this.renderUISection(containerEl);
     this.renderInstancesSection(containerEl);
     this.renderMappingsSection(containerEl);
+    this.renderSyncSection(containerEl);
   }
 
   private showToast(message: string, type: 'success' | 'error'): void {
@@ -446,11 +447,17 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
       cf => cf.enabled && (!cf.instanceId || cf.instanceId === instanceId) && (!cf.projectKey || cf.projectKey === mapping.projectKey),
     );
 
+    const defaultSyncFields = [
+      { jiraField: 'status', frontmatterKey: 'jira_status', enabled: true, readOnly: true },
+      { jiraField: 'assignee', frontmatterKey: 'jira_assignee', enabled: false, readOnly: true },
+      { jiraField: 'priority', frontmatterKey: 'jira_priority', enabled: false, readOnly: true },
+    ];
+
     const modal = new AdvancedConfigModal(this.app, {
       mapping,
       instance,
       customFields,
-      globalSyncFields: this.plugin.settings.sync.syncFields,
+      globalSyncFields: this.plugin.settings.sync?.syncFields ?? defaultSyncFields,
       onUpdate: async projectConfig => {
         const mappingIndex = this.plugin.settings.mappings.findIndex(m => m.id === mapping.id);
         if (mappingIndex !== -1) {
@@ -466,6 +473,123 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
 
     await modal.open();
     this.display();
+  }
+
+  private renderSyncSection(containerEl: HTMLElement): void {
+    const section = containerEl.createEl('div', { cls: 'sync-settings-section' });
+
+    new Setting(section).setName('Sync Settings').setHeading();
+
+    new Setting(section)
+      .setName('Auto-sync')
+      .setDesc('Automatically sync open notes with Jira at regular intervals')
+      .addToggle(toggle => {
+        const syncSettings = this.plugin.settings.sync ?? { autoSync: false, syncInterval: 1 };
+        toggle.setValue(syncSettings.autoSync ?? false).onChange(async value => {
+          if (!this.plugin.settings.sync) {
+            this.plugin.settings.sync = {
+              autoSync: false,
+              syncInterval: 1,
+              syncOnFileOpen: true,
+              updateFrontmatter: true,
+              frontmatterFields: [],
+              syncFields: [],
+            };
+          }
+          this.plugin.settings.sync.autoSync = value;
+          await this.plugin.saveSettings();
+        });
+      });
+
+    new Setting(section)
+      .setName('Sync interval')
+      .setDesc('How often to sync (in minutes)')
+      .addText(text => {
+        const syncSettings = this.plugin.settings.sync ?? { syncInterval: 1 };
+        text.setValue(String(syncSettings.syncInterval ?? 1)).onChange(async value => {
+          const interval = parseInt(value) || 1;
+          if (!this.plugin.settings.sync) {
+            this.plugin.settings.sync = {
+              autoSync: false,
+              syncInterval: 1,
+              syncOnFileOpen: true,
+              updateFrontmatter: true,
+              frontmatterFields: [],
+              syncFields: [],
+            };
+          }
+          this.plugin.settings.sync.syncInterval = Math.max(1, interval);
+          await this.plugin.saveSettings();
+        });
+        text.inputEl.type = 'number';
+        text.inputEl.min = '1';
+        text.inputEl.style.width = '60px';
+      });
+
+    new Setting(section)
+      .setName('Sync on file open')
+      .setDesc('Sync note when you open or switch to it')
+      .addToggle(toggle => {
+        const syncSettings = this.plugin.settings.sync ?? { syncOnFileOpen: true };
+        toggle.setValue(syncSettings.syncOnFileOpen ?? true).onChange(async value => {
+          if (!this.plugin.settings.sync) {
+            this.plugin.settings.sync = {
+              autoSync: false,
+              syncInterval: 1,
+              syncOnFileOpen: true,
+              updateFrontmatter: true,
+              frontmatterFields: [],
+              syncFields: [],
+            };
+          }
+          this.plugin.settings.sync.syncOnFileOpen = value;
+          await this.plugin.saveSettings();
+        });
+      });
+
+    new Setting(section).setName('Sync Fields').setDesc('Fields to sync from Jira to frontmatter (global defaults)');
+
+    const fieldsContainer = section.createEl('div', { cls: 'sync-fields-global' });
+    this.renderGlobalSyncFields(fieldsContainer);
+  }
+
+  private renderGlobalSyncFields(container: HTMLElement): void {
+    container.empty();
+
+    const defaultFields = [
+      { jiraField: 'status', frontmatterKey: 'jira_status', enabled: true, readOnly: true },
+      { jiraField: 'assignee', frontmatterKey: 'jira_assignee', enabled: false, readOnly: true },
+      { jiraField: 'priority', frontmatterKey: 'jira_priority', enabled: false, readOnly: true },
+    ];
+
+    const syncFields = this.plugin.settings.sync?.syncFields ?? defaultFields;
+
+    for (const field of syncFields) {
+      const item = container.createEl('div', { cls: 'sync-field-item' });
+
+      const checkbox = item.createEl('input', { type: 'checkbox' });
+      checkbox.checked = field.enabled;
+      checkbox.addEventListener('change', async () => {
+        field.enabled = checkbox.checked;
+        if (!this.plugin.settings.sync) {
+          this.plugin.settings.sync = {
+            autoSync: false,
+            syncInterval: 1,
+            syncOnFileOpen: true,
+            updateFrontmatter: true,
+            frontmatterFields: [],
+            syncFields: syncFields,
+          };
+        }
+        this.plugin.settings.sync.syncFields = syncFields;
+        await this.plugin.saveSettings();
+      });
+
+      const label = item.createEl('label');
+      label.createSpan({ text: field.jiraField, cls: 'field-jira' });
+      label.createSpan({ text: ' → ', cls: 'field-arrow' });
+      label.createSpan({ text: field.frontmatterKey, cls: 'field-frontmatter' });
+    }
   }
 
   private renderUISection(containerEl: HTMLElement): void {

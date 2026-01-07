@@ -15,6 +15,7 @@ import {
   BulkStatusChangeProgressModal,
   BulkStatusChangeReportModal,
   StatusChangeModal,
+  LinkTicketModal,
 } from '../modals';
 import type { RecentIssue } from '../modals';
 import { parseSummaryFromContent, parseDescriptionFromContent, addFrontmatterFields, readFrontmatterField } from '../utils';
@@ -100,6 +101,12 @@ export class JiraBridgePlugin extends Plugin {
       name: 'Change Issue Status',
       hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 's' }],
       callback: () => this.openStatusChangeModal(),
+    });
+
+    this.addCommand({
+      id: 'link-existing-ticket',
+      name: 'Link existing Jira ticket',
+      callback: () => this.openLinkTicketModal(),
     });
   }
 
@@ -427,6 +434,45 @@ export class JiraBridgePlugin extends Plugin {
           });
         }
       }
+    }
+  }
+
+  private async openLinkTicketModal(): Promise<void> {
+    const activeFile = this.app.workspace.getActiveFile();
+    if (!activeFile) {
+      new Notice('No active file');
+      return;
+    }
+
+    const enabledInstances = this.settings.instances.filter(i => i.enabled);
+    if (enabledInstances.length === 0) {
+      new Notice('No Jira instances configured');
+      return;
+    }
+
+    const context = this.mappingResolver.resolve(activeFile.path);
+    const currentIssueKey = readFrontmatterField(this.app, activeFile, 'issue_id');
+
+    const modal = new LinkTicketModal(this.app, {
+      instances: enabledInstances,
+      defaultInstanceId: context.instance?.id,
+      currentIssueKey,
+    });
+
+    const result = await modal.open();
+
+    if (result) {
+      const instance = enabledInstances.find(i => i.id === result.instanceId);
+      if (!instance) return;
+
+      const issueUrl = instance.baseUrl.replace(/\/+$/, '') + '/browse/' + result.issueKey;
+
+      await addFrontmatterFields(this.app, activeFile, {
+        issue_id: result.issueKey,
+        issue_link: issueUrl,
+      });
+
+      new Notice(`Linked to ${result.issueKey}`);
     }
   }
 

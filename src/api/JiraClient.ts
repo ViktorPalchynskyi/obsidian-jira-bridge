@@ -392,7 +392,10 @@ export class JiraClient {
     };
   }
 
-  async searchIssues(query: string, maxResults: number = 5): Promise<{ key: string; summary: string }[]> {
+  async searchIssues(
+    query: string,
+    maxResults: number = 5,
+  ): Promise<{ key: string; summary: string; status?: { name: string }; issueType?: { name: string } }[]> {
     if (!query || query.length < 2) return [];
 
     const isKeyPattern = /^[A-Z]+-\d*$/i.test(query);
@@ -405,7 +408,8 @@ export class JiraClient {
       jql = `summary ~ "${escapedQuery}" ORDER BY updated DESC`;
     }
 
-    const url = this.buildUrl('/rest/api/3/search/jql') + `?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&fields=summary`;
+    const url =
+      this.buildUrl('/rest/api/3/search/jql') + `?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}&fields=summary,status,issuetype`;
 
     try {
       const response: RequestUrlResponse = await requestUrl({
@@ -420,9 +424,13 @@ export class JiraClient {
 
       return response.json.issues.map((issue: Record<string, unknown>) => {
         const fields = issue.fields as Record<string, unknown>;
+        const status = fields.status as Record<string, unknown> | undefined;
+        const issueType = fields.issuetype as Record<string, unknown> | undefined;
         return {
           key: issue.key as string,
           summary: fields.summary as string,
+          status: status ? { name: status.name as string } : undefined,
+          issueType: issueType ? { name: issueType.name as string } : undefined,
         };
       });
     } catch {

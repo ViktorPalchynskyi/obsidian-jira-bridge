@@ -92,7 +92,7 @@ export class StatusBarManager {
       this.projectItem.addEventListener('click', () => this.onClickCallback());
     }
 
-    if (this.settings.showStatusBarInstance) {
+    if (this.settings.showStatusBarStatus) {
       this.statusItem = this.plugin.addStatusBarItem();
       this.statusItem.addClass('jira-bridge-status', 'jira-bridge-status-ticket');
       this.statusItem.setText('Status: None');

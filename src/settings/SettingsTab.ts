@@ -617,6 +617,16 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
         }),
       );
 
+    new Setting(section)
+      .setName('Show ticket status')
+      .setDesc('Display Jira ticket status in the status bar for linked notes')
+      .addToggle(toggle =>
+        toggle.setValue(this.plugin.settings.ui.showStatusBarStatus).onChange(async value => {
+          this.plugin.settings.ui.showStatusBarStatus = value;
+          await this.plugin.saveSettings();
+        }),
+      );
+
     new Setting(section).setName('Custom Fields').setHeading();
 
     new Setting(section)

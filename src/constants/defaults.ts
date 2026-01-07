@@ -37,6 +37,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     showRibbonIcon: true,
     showStatusBarInstance: true,
     showStatusBarProject: true,
+    showStatusBarStatus: true,
     defaultModalSize: 'medium',
     enableCustomFields: false,
   },

@@ -50,6 +50,7 @@ export interface UISettings {
   showRibbonIcon: boolean;
   showStatusBarInstance: boolean;
   showStatusBarProject: boolean;
+  showStatusBarStatus: boolean;
   defaultModalSize: 'small' | 'medium' | 'large';
   enableCustomFields: boolean;
 }

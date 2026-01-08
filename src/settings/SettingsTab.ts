@@ -1,12 +1,15 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import type { JiraBridgePlugin } from '../core/Plugin';
 import type { JiraInstance, FolderMapping, MappingType } from '../types';
+import type { ConfigurationReference } from '../types/configExport.types';
 import { JiraInstanceModal, FolderMappingModal, CustomFieldsModal, FrontmatterMappingModal, AdvancedConfigModal } from '../modals';
 import { JiraClient } from '../api';
+import { ConfigDiscoveryService } from '../services/configExport';
 
 export class JiraBridgeSettingsTab extends PluginSettingTab {
   plugin: JiraBridgePlugin;
   private toastContainer: HTMLElement | null = null;
+  private discoveredConfigs: ConfigurationReference[] = [];
 
   constructor(app: App, plugin: JiraBridgePlugin) {
     super(app, plugin);
@@ -26,6 +29,7 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
     this.renderInstancesSection(containerEl);
     this.renderMappingsSection(containerEl);
     this.renderSyncSection(containerEl);
+    this.renderConfigExportSection(containerEl);
   }
 
   private showToast(message: string, type: 'success' | 'error'): void {
@@ -639,5 +643,139 @@ export class JiraBridgeSettingsTab extends PluginSettingTab {
           this.display();
         }),
       );
+  }
+
+  private renderConfigExportSection(containerEl: HTMLElement): void {
+    const section = containerEl.createEl('div', { cls: 'config-export-section' });
+
+    new Setting(section).setName('Configuration Export').setHeading();
+
+    new Setting(section)
+      .setName('Export folder')
+      .setDesc('Folder path where exported configurations are stored')
+      .addText(text => {
+        const basePath = this.plugin.settings.configExport?.basePath ?? 'Jira/Configs';
+        text.setValue(basePath).onChange(async value => {
+          if (!this.plugin.settings.configExport) {
+            this.plugin.settings.configExport = { basePath: 'Jira/Configs' };
+          }
+          this.plugin.settings.configExport.basePath = value || 'Jira/Configs';
+          await this.plugin.saveSettings();
+        });
+        text.inputEl.style.width = '200px';
+      });
+
+    new Setting(section)
+      .setName('Exported Configurations')
+      .setDesc('Previously exported project configurations')
+      .addButton(button =>
+        button.setButtonText('Refresh').onClick(async () => {
+          await this.loadDiscoveredConfigs();
+          this.renderConfigList(section);
+        }),
+      );
+
+    section.createEl('div', { cls: 'config-list-container' });
+    this.loadDiscoveredConfigs().then(() => {
+      this.renderConfigList(section);
+    });
+  }
+
+  private async loadDiscoveredConfigs(): Promise<void> {
+    const discoveryService = new ConfigDiscoveryService(this.app);
+    const basePath = this.plugin.settings.configExport?.basePath ?? 'Jira/Configs';
+    this.discoveredConfigs = await discoveryService.discoverConfigs(basePath);
+  }
+
+  private renderConfigList(section: HTMLElement): void {
+    let listContainer = section.querySelector('.config-list-container') as HTMLElement;
+    if (!listContainer) {
+      listContainer = section.createEl('div', { cls: 'config-list-container' });
+    }
+    listContainer.empty();
+
+    if (this.discoveredConfigs.length === 0) {
+      listContainer.createEl('p', {
+        text: 'No exported configurations found. Use "Export Project Configuration" command to create one.',
+        cls: 'setting-item-description',
+      });
+      return;
+    }
+
+    for (const config of this.discoveredConfigs) {
+      this.renderConfigCard(listContainer, config);
+    }
+  }
+
+  private renderConfigCard(container: HTMLElement, config: ConfigurationReference): void {
+    const card = container.createEl('div', { cls: 'config-card' });
+
+    const header = card.createEl('div', { cls: 'config-header' });
+
+    const titleContainer = header.createEl('div', { cls: 'config-title-container' });
+    titleContainer.createEl('span', {
+      text: `${config.projectKey} - ${config.projectName}`,
+      cls: 'config-name',
+    });
+    titleContainer.createEl('span', {
+      text: config.instanceName,
+      cls: 'config-badge',
+    });
+
+    const actions = header.createEl('div', { cls: 'config-actions' });
+
+    const viewButton = actions.createEl('button', {
+      text: 'View',
+      cls: 'config-action-btn',
+      attr: { 'aria-label': 'View configuration' },
+    });
+    viewButton.addEventListener('click', async () => {
+      await this.handleViewConfig(config);
+    });
+
+    const deleteButton = actions.createEl('button', {
+      text: 'Delete',
+      cls: 'config-action-btn mod-warning',
+      attr: { 'aria-label': 'Delete configuration' },
+    });
+    deleteButton.addEventListener('click', async () => {
+      await this.handleDeleteConfig(config);
+    });
+
+    const details = card.createEl('div', { cls: 'config-details' });
+    const exportDate = new Date(config.exportedAt).toLocaleString();
+    details.createEl('div', { text: `Exported: ${exportDate}`, cls: 'config-date' });
+    details.createEl('div', {
+      text: `Fields: ${config.fieldsCount} | Issue Types: ${config.issueTypesCount} | Workflows: ${config.workflowsCount}`,
+      cls: 'config-stats',
+    });
+  }
+
+  private async handleViewConfig(config: ConfigurationReference): Promise<void> {
+    const readmeFile = this.app.vault.getAbstractFileByPath(`${config.folderPath}/README.md`);
+    if (readmeFile && 'extension' in readmeFile) {
+      (this.app as unknown as { setting: { close: () => void } }).setting.close();
+      const leaf = this.app.workspace.getLeaf();
+      await leaf.openFile(readmeFile as never);
+    }
+  }
+
+  private async handleDeleteConfig(config: ConfigurationReference): Promise<void> {
+    const confirmed = confirm(`Are you sure you want to delete the configuration for "${config.projectKey}"?`);
+    if (!confirmed) return;
+
+    const discoveryService = new ConfigDiscoveryService(this.app);
+    const deleted = await discoveryService.deleteConfig(config.folderPath);
+
+    if (deleted) {
+      this.showToast(`Configuration "${config.projectKey}" deleted`, 'success');
+      await this.loadDiscoveredConfigs();
+      const section = this.containerEl.querySelector('.config-export-section') as HTMLElement;
+      if (section) {
+        this.renderConfigList(section);
+      }
+    } else {
+      this.showToast(`Failed to delete configuration`, 'error');
+    }
   }
 }

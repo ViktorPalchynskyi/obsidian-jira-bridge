@@ -52,4 +52,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     cacheTTL: 300,
   },
   recentIssues: [],
+  configExport: {
+    basePath: 'Jira/Configs',
+  },
 };

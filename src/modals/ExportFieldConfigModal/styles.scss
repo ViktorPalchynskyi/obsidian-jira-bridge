@@ -15,6 +15,30 @@
     }
   }
 
+  .export-options-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      background: var(--background-secondary);
+
+      &:hover {
+        background-color: var(--background-modifier-hover);
+      }
+
+      input[type='checkbox'] {
+        margin: 0;
+      }
+    }
+  }
+
   .issue-type-checkboxes {
     .select-all-container {
       display: flex;

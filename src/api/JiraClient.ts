@@ -809,4 +809,180 @@ export class JiraClient {
       return [];
     }
   }
+
+  async getWorkflowScheme(projectId: string): Promise<{
+    id: string;
+    name: string;
+    defaultWorkflow: string;
+    issueTypeMappings: Record<string, string>;
+  } | null> {
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl(`/rest/api/3/workflowscheme/project?projectId=${projectId}`),
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return null;
+      }
+
+      const values = response.json.values || [];
+      if (values.length === 0) {
+        return null;
+      }
+
+      const scheme = values[0];
+      const issueTypeMappings: Record<string, string> = {};
+
+      if (scheme.issueTypeMappings) {
+        for (const mapping of scheme.issueTypeMappings) {
+          issueTypeMappings[mapping.issueType] = mapping.workflow;
+        }
+      }
+
+      return {
+        id: scheme.id,
+        name: scheme.name,
+        defaultWorkflow: scheme.defaultWorkflow || '',
+        issueTypeMappings,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async getWorkflows(): Promise<
+    {
+      id: string;
+      name: string;
+      description?: string;
+      statuses: { id: string; name: string; statusCategory: { id: number; key: string; name: string } }[];
+      transitions: { id: string; name: string; from: string | null; to: string }[];
+    }[]
+  > {
+    try {
+      const allWorkflows: {
+        id: string;
+        name: string;
+        description?: string;
+        statuses: { id: string; name: string; statusCategory: { id: number; key: string; name: string } }[];
+        transitions: { id: string; name: string; from: string | null; to: string }[];
+      }[] = [];
+      let startAt = 0;
+      const maxResults = 50;
+
+      while (true) {
+        const response: RequestUrlResponse = await requestUrl({
+          url: this.buildUrl(`/rest/api/3/workflow/search?startAt=${startAt}&maxResults=${maxResults}&expand=statuses,transitions`),
+          method: 'GET',
+          headers: this.getHeaders(),
+        });
+
+        if (response.status !== 200) {
+          break;
+        }
+
+        const values = response.json.values || [];
+        for (const wf of values) {
+          const statuses = (wf.statuses || []).map((s: Record<string, unknown>) => ({
+            id: s.id as string,
+            name: s.name as string,
+            statusCategory: s.statusCategory as { id: number; key: string; name: string },
+          }));
+
+          const transitions = (wf.transitions || []).map((t: Record<string, unknown>) => ({
+            id: t.id as string,
+            name: t.name as string,
+            from: (t.from as { id: string } | null)?.id || null,
+            to: (t.to as { id: string })?.id || '',
+          }));
+
+          allWorkflows.push({
+            id: wf.id?.entityId || wf.name,
+            name: wf.name,
+            description: wf.description,
+            statuses,
+            transitions,
+          });
+        }
+
+        if (values.length < maxResults) {
+          break;
+        }
+        startAt += maxResults;
+      }
+
+      return allWorkflows;
+    } catch {
+      return [];
+    }
+  }
+
+  async getProjectStatuses(projectKey: string): Promise<
+    {
+      issueTypeId: string;
+      issueTypeName: string;
+      statuses: { id: string; name: string; statusCategory: { id: number; key: string; name: string } }[];
+    }[]
+  > {
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl(`/rest/api/3/project/${projectKey}/statuses`),
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return [];
+      }
+
+      return (response.json || []).map((item: Record<string, unknown>) => ({
+        issueTypeId: item.id as string,
+        issueTypeName: item.name as string,
+        statuses: ((item.statuses as Record<string, unknown>[]) || []).map(s => ({
+          id: s.id as string,
+          name: s.name as string,
+          statusCategory: s.statusCategory as { id: number; key: string; name: string },
+        })),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async getIssueTypesForProject(projectKey: string): Promise<
+    {
+      id: string;
+      name: string;
+      description?: string;
+      iconUrl?: string;
+      subtask: boolean;
+      hierarchyLevel: number;
+    }[]
+  > {
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl(`/rest/api/3/project/${projectKey}`),
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return [];
+      }
+
+      const issueTypes = response.json.issueTypes || [];
+      return issueTypes.map((it: Record<string, unknown>) => ({
+        id: it.id as string,
+        name: it.name as string,
+        description: it.description as string | undefined,
+        iconUrl: it.iconUrl as string | undefined,
+        subtask: it.subtask as boolean,
+        hierarchyLevel: (it.hierarchyLevel as number) || 0,
+      }));
+    } catch {
+      return [];
+    }
+  }
 }

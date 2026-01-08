@@ -3,7 +3,7 @@ import { BaseModal } from '../base/BaseModal';
 import type { JiraInstance, JiraIssueType, JiraProject } from '../../types';
 import type { ExportModalResult, ExportProgress } from '../../types/configExport.types';
 import { JiraClient } from '../../api/JiraClient';
-import { FieldExportService } from '../../services/configExport';
+import { ProjectExportService, type ExportOptions } from '../../services/configExport';
 
 interface ExportFieldConfigModalOptions {
   instances: JiraInstance[];
@@ -26,11 +26,19 @@ export class ExportFieldConfigModal extends BaseModal<ExportModalResult> {
 
   private projectDropdown: DropdownComponent | null = null;
   private issueTypeContainer: HTMLElement | null = null;
+  private exportOptionsContainer: HTMLElement | null = null;
   private exportButton: HTMLButtonElement | null = null;
   private progressContainer: HTMLElement | null = null;
 
   private resultPath: string = '';
   private errorMessage: string = '';
+
+  private exportOptions: ExportOptions = {
+    includeFields: true,
+    includeWorkflows: true,
+    includeIssueTypes: true,
+    includeBoards: true,
+  };
 
   constructor(app: App, options: ExportFieldConfigModalOptions) {
     super(app);
@@ -47,7 +55,7 @@ export class ExportFieldConfigModal extends BaseModal<ExportModalResult> {
     contentEl.addClass('jira-bridge-modal', 'export-config-modal');
 
     contentEl.createEl('h2', {
-      text: 'Export Field Configuration',
+      text: 'Export Project Configuration',
       cls: 'modal-title',
     });
 
@@ -85,6 +93,7 @@ export class ExportFieldConfigModal extends BaseModal<ExportModalResult> {
     this.renderInstanceDropdown(form);
     this.renderProjectDropdown(form);
     this.renderIssueTypeSelection(form);
+    this.renderExportOptions(form);
     this.renderButtons(container);
 
     if (this.selectedInstance) {
@@ -157,6 +166,33 @@ export class ExportFieldConfigModal extends BaseModal<ExportModalResult> {
       text: 'Select a project first',
       cls: 'text-muted',
     });
+  }
+
+  private renderExportOptions(container: HTMLElement): void {
+    const fieldGroup = container.createDiv('field-group');
+    fieldGroup.createEl('label', { text: 'Export Options' });
+
+    this.exportOptionsContainer = fieldGroup.createDiv('export-options-checkboxes');
+
+    const options: { key: keyof ExportOptions; label: string }[] = [
+      { key: 'includeFields', label: 'Fields & Options' },
+      { key: 'includeWorkflows', label: 'Workflows' },
+      { key: 'includeIssueTypes', label: 'Issue Types' },
+      { key: 'includeBoards', label: 'Boards' },
+    ];
+
+    for (const opt of options) {
+      const item = this.exportOptionsContainer.createDiv('checkbox-label');
+      const checkbox = item.createEl('input', { type: 'checkbox' });
+      checkbox.checked = this.exportOptions[opt.key];
+
+      item.createEl('label', { text: opt.label });
+
+      checkbox.addEventListener('change', () => {
+        this.exportOptions[opt.key] = checkbox.checked;
+        this.updateExportButton();
+      });
+    }
   }
 
   private renderButtons(container: HTMLElement): void {
@@ -276,7 +312,12 @@ export class ExportFieldConfigModal extends BaseModal<ExportModalResult> {
 
   private updateExportButton(): void {
     if (!this.exportButton) return;
-    this.exportButton.disabled = !this.selectedInstance || !this.selectedProject || this.selectedIssueTypes.size === 0;
+    const hasAnyOption =
+      this.exportOptions.includeFields ||
+      this.exportOptions.includeWorkflows ||
+      this.exportOptions.includeIssueTypes ||
+      this.exportOptions.includeBoards;
+    this.exportButton.disabled = !this.selectedInstance || !this.selectedProject || this.selectedIssueTypes.size === 0 || !hasAnyOption;
   }
 
   private async startExport(): Promise<void> {
@@ -286,10 +327,13 @@ export class ExportFieldConfigModal extends BaseModal<ExportModalResult> {
     this.renderContent();
 
     try {
-      const service = new FieldExportService(this.app, this.selectedInstance, this.options.pluginVersion);
+      const service = new ProjectExportService(this.app, this.selectedInstance, this.options.pluginVersion);
 
-      const config = await service.exportFieldConfig(this.selectedProject.key, Array.from(this.selectedIssueTypes), progress =>
-        this.updateProgress(progress),
+      const config = await service.exportProjectConfig(
+        this.selectedProject.key,
+        Array.from(this.selectedIssueTypes),
+        this.exportOptions,
+        progress => this.updateProgress(progress),
       );
 
       const basePath = this.options.defaultBasePath || 'Jira/Configs';
@@ -356,9 +400,9 @@ export class ExportFieldConfigModal extends BaseModal<ExportModalResult> {
         const folder = this.app.vault.getAbstractFileByPath(this.resultPath);
         if (folder) {
           const leaf = this.app.workspace.getLeaf();
-          const firstFile = this.app.vault.getAbstractFileByPath(`${this.resultPath}/fields.md`);
-          if (firstFile) {
-            leaf.openFile(firstFile as never);
+          const readmeFile = this.app.vault.getAbstractFileByPath(`${this.resultPath}/README.md`);
+          if (readmeFile) {
+            leaf.openFile(readmeFile as never);
           }
         }
         this.submit({ folderPath: this.resultPath, projectKey: this.selectedProject?.key || '' });

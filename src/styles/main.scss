@@ -10,6 +10,7 @@
 @use '../modals/BulkStatusChangeModal/styles.scss' as bulkStatusChange;
 @use '../modals/LinkTicketModal/styles.scss' as linkTicket;
 @use '../modals/SyncSettingsModal/styles.scss' as syncSettings;
+@use '../modals/ExportFieldConfigModal/styles.scss' as exportFieldConfig;
 @use '../settings/styles.scss' as settings;
 @use './statusbar.scss' as statusbar;
 @use './file-selection.scss' as fileSelection;

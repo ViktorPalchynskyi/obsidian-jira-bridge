@@ -1,0 +1,176 @@
+.export-config-modal {
+  .modal-content {
+    padding: var(--size-4-3);
+  }
+
+  .modal-form {
+    .field-group {
+      margin-bottom: var(--size-4-3);
+
+      label {
+        display: block;
+        margin-bottom: var(--size-4-1);
+        font-weight: var(--font-semibold);
+      }
+    }
+  }
+
+  .issue-type-checkboxes {
+    .select-all-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid var(--background-modifier-border);
+
+      input[type='checkbox'] {
+        margin: 0;
+      }
+
+      label {
+        font-weight: 500;
+      }
+    }
+
+    .checkboxes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 0.25rem;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+
+      &:hover {
+        background-color: var(--background-modifier-hover);
+      }
+
+      input[type='checkbox'] {
+        margin: 0;
+      }
+    }
+
+    .text-muted {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+  }
+
+  .modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--size-4-2);
+    margin-top: var(--size-4-4);
+    padding-top: var(--size-4-3);
+    border-top: 1px solid var(--background-modifier-border);
+  }
+
+  .export-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--size-4-6);
+    text-align: center;
+
+    .progress-spinner {
+      width: 48px;
+      height: 48px;
+      margin-bottom: var(--size-4-3);
+      color: var(--interactive-accent);
+
+      &.spin {
+        animation: spin 1s linear infinite;
+      }
+
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    .progress-text {
+      margin-bottom: var(--size-4-3);
+      color: var(--text-muted);
+    }
+
+    .progress-bar {
+      width: 100%;
+      max-width: 300px;
+      height: 4px;
+      background: var(--background-modifier-border);
+      border-radius: 2px;
+      overflow: hidden;
+
+      .progress-fill {
+        height: 100%;
+        background: var(--interactive-accent);
+        transition: width 0.3s ease;
+        width: 0;
+      }
+    }
+  }
+
+  .export-success,
+  .export-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--size-4-4);
+    text-align: center;
+
+    h3 {
+      margin: var(--size-4-3) 0 var(--size-4-2);
+    }
+
+    p {
+      color: var(--text-muted);
+      margin-bottom: var(--size-4-2);
+    }
+
+    code {
+      display: block;
+      padding: var(--size-4-2) var(--size-4-3);
+      background: var(--background-secondary);
+      border-radius: var(--radius-s);
+      font-size: var(--font-ui-smaller);
+      word-break: break-all;
+    }
+  }
+
+  .success-icon {
+    width: 48px;
+    height: 48px;
+    color: var(--text-success);
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  .error-icon {
+    width: 48px;
+    height: 48px;
+    color: var(--text-error);
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

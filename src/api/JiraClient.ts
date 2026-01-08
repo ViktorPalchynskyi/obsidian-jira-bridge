@@ -636,4 +636,177 @@ export class JiraClient {
       throw new Error(`Failed to move issues to board: ${response.status}`);
     }
   }
+
+  async getProject(projectKey: string): Promise<{
+    id: string;
+    key: string;
+    name: string;
+    projectTypeKey: string;
+    description?: string;
+  }> {
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl(`/rest/api/3/project/${projectKey}`),
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`Failed to fetch project: ${response.status}`);
+    }
+
+    return {
+      id: response.json.id,
+      key: response.json.key,
+      name: response.json.name,
+      projectTypeKey: response.json.projectTypeKey,
+      description: response.json.description,
+    };
+  }
+
+  async getProjectFields(projectId: string): Promise<
+    {
+      id: string;
+      key: string;
+      name: string;
+      custom: boolean;
+      schema: {
+        type: string;
+        system?: string;
+        custom?: string;
+        customId?: number;
+        items?: string;
+      };
+    }[]
+  > {
+    const allFields: {
+      id: string;
+      key: string;
+      name: string;
+      custom: boolean;
+      schema: {
+        type: string;
+        system?: string;
+        custom?: string;
+        customId?: number;
+        items?: string;
+      };
+    }[] = [];
+    let startAt = 0;
+    const maxResults = 100;
+
+    while (true) {
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl(`/rest/api/3/field/search?projectIds=${projectId}&startAt=${startAt}&maxResults=${maxResults}`),
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        throw new Error(`Failed to fetch fields: ${response.status}`);
+      }
+
+      const values = response.json.values || [];
+      for (const field of values) {
+        allFields.push({
+          id: field.id,
+          key: field.key || field.id,
+          name: field.name,
+          custom: field.schema?.custom !== undefined,
+          schema: {
+            type: field.schema?.type || 'unknown',
+            system: field.schema?.system,
+            custom: field.schema?.custom,
+            customId: field.schema?.customId,
+            items: field.schema?.items,
+          },
+        });
+      }
+
+      if (values.length < maxResults) {
+        break;
+      }
+      startAt += maxResults;
+    }
+
+    return allFields;
+  }
+
+  async getFieldContexts(fieldId: string): Promise<{ id: string; name: string; isGlobalContext: boolean; isAnyIssueType: boolean }[]> {
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl(`/rest/api/3/field/${fieldId}/context`),
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return [];
+      }
+
+      return (response.json.values || []).map((ctx: Record<string, unknown>) => ({
+        id: ctx.id as string,
+        name: ctx.name as string,
+        isGlobalContext: ctx.isGlobalContext as boolean,
+        isAnyIssueType: ctx.isAnyIssueType as boolean,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async getFieldContextIssueTypes(fieldId: string, contextId: string): Promise<string[]> {
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl(`/rest/api/3/field/${fieldId}/context/${contextId}/issuetype`),
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return [];
+      }
+
+      return (response.json.values || []).map((it: Record<string, unknown>) => it.issueTypeId as string);
+    } catch {
+      return [];
+    }
+  }
+
+  async getFieldOptions(fieldId: string, contextId: string): Promise<{ id: string; value: string; disabled: boolean }[]> {
+    try {
+      const allOptions: { id: string; value: string; disabled: boolean }[] = [];
+      let startAt = 0;
+      const maxResults = 100;
+
+      while (true) {
+        const response: RequestUrlResponse = await requestUrl({
+          url: this.buildUrl(`/rest/api/3/field/${fieldId}/context/${contextId}/option?startAt=${startAt}&maxResults=${maxResults}`),
+          method: 'GET',
+          headers: this.getHeaders(),
+        });
+
+        if (response.status !== 200) {
+          break;
+        }
+
+        const values = response.json.values || [];
+        for (const opt of values) {
+          allOptions.push({
+            id: opt.id,
+            value: opt.value,
+            disabled: opt.disabled || false,
+          });
+        }
+
+        if (values.length < maxResults) {
+          break;
+        }
+        startAt += maxResults;
+      }
+
+      return allOptions;
+    } catch {
+      return [];
+    }
+  }
 }

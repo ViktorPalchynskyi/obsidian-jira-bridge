@@ -16,6 +16,7 @@ import {
   BulkStatusChangeReportModal,
   StatusChangeModal,
   LinkTicketModal,
+  ExportFieldConfigModal,
 } from '../modals';
 import type { RecentIssue } from '../modals';
 import { parseSummaryFromContent, parseDescriptionFromContent, addFrontmatterFields, readFrontmatterField } from '../utils';
@@ -156,6 +157,28 @@ export class JiraBridgePlugin extends Plugin {
       name: 'Sync all open notes with Jira',
       callback: () => this.syncOpenNotes(),
     });
+
+    this.addCommand({
+      id: 'export-field-configuration',
+      name: 'Export Field Configuration',
+      callback: () => this.openExportFieldConfigModal(),
+    });
+  }
+
+  private async openExportFieldConfigModal(): Promise<void> {
+    const enabledInstances = this.settings.instances.filter(i => i.enabled);
+    if (enabledInstances.length === 0) {
+      new Notice('No Jira instances configured');
+      return;
+    }
+
+    const modal = new ExportFieldConfigModal(this.app, {
+      instances: this.settings.instances,
+      pluginVersion: this.manifest.version,
+      defaultBasePath: 'Jira/Configs',
+    });
+
+    await modal.open();
   }
 
   private async openCreateTicketModal(): Promise<void> {

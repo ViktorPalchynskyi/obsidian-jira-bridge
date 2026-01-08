@@ -985,4 +985,119 @@ export class JiraClient {
       return [];
     }
   }
+
+  async createCustomField(params: {
+    name: string;
+    description?: string;
+    type: string;
+    searcherKey?: string;
+  }): Promise<{ id: string; key: string; name: string }> {
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl('/rest/api/3/field'),
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({
+        name: params.name,
+        description: params.description || '',
+        type: params.type,
+        searcherKey: params.searcherKey,
+      }),
+    });
+
+    if (response.status !== 201) {
+      const errorMessage =
+        response.json?.errorMessages?.join(', ') || response.json?.errors
+          ? Object.values(response.json.errors).join(', ')
+          : `Failed to create custom field: ${response.status}`;
+      throw new Error(errorMessage);
+    }
+
+    return {
+      id: response.json.id,
+      key: response.json.key || response.json.id,
+      name: response.json.name,
+    };
+  }
+
+  async createIssueType(params: {
+    name: string;
+    description?: string;
+    type?: 'standard' | 'subtask';
+    hierarchyLevel?: number;
+  }): Promise<{ id: string; name: string }> {
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl('/rest/api/3/issuetype'),
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({
+        name: params.name,
+        description: params.description || '',
+        type: params.type || 'standard',
+        hierarchyLevel: params.hierarchyLevel ?? 0,
+      }),
+    });
+
+    if (response.status !== 201) {
+      const errorMessage =
+        response.json?.errorMessages?.join(', ') || response.json?.errors
+          ? Object.values(response.json.errors).join(', ')
+          : `Failed to create issue type: ${response.status}`;
+      throw new Error(errorMessage);
+    }
+
+    return {
+      id: response.json.id,
+      name: response.json.name,
+    };
+  }
+
+  async addIssueTypeToScheme(schemeId: string, issueTypeId: string): Promise<void> {
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl(`/rest/api/3/issuetypescheme/${schemeId}/issuetype`),
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify({
+        issueTypeIds: [issueTypeId],
+      }),
+    });
+
+    if (response.status !== 204 && response.status !== 200) {
+      throw new Error(`Failed to add issue type to scheme: ${response.status}`);
+    }
+  }
+
+  async createStatuses(
+    projectId: string,
+    statuses: { name: string; description?: string; statusCategory: 'TODO' | 'IN_PROGRESS' | 'DONE' }[],
+  ): Promise<{ id: string; name: string }[]> {
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl('/rest/api/3/statuses'),
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({
+        scope: {
+          project: { id: projectId },
+          type: 'PROJECT',
+        },
+        statuses: statuses.map(s => ({
+          name: s.name,
+          description: s.description || '',
+          statusCategory: s.statusCategory,
+        })),
+      }),
+    });
+
+    if (response.status !== 200 && response.status !== 201) {
+      const errorMessage =
+        response.json?.errorMessages?.join(', ') || response.json?.errors
+          ? Object.values(response.json.errors).join(', ')
+          : `Failed to create statuses: ${response.status}`;
+      throw new Error(errorMessage);
+    }
+
+    return (response.json || []).map((s: Record<string, unknown>) => ({
+      id: s.id as string,
+      name: s.name as string,
+    }));
+  }
 }

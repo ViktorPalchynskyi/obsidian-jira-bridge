@@ -24,3 +24,4 @@ export type { SyncSettingsModalOptions, SyncSettingsModalResult } from './SyncSe
 export { LinkTicketModal } from './LinkTicketModal/LinkTicketModal';
 export type { LinkTicketModalOptions, LinkTicketModalResult } from './LinkTicketModal/types';
 export { ExportFieldConfigModal } from './ExportFieldConfigModal';
+export { ImportConfigurationModal } from './ImportConfigurationModal';

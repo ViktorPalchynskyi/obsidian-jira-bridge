@@ -124,7 +124,7 @@ describe('ConfigurationValidationService', () => {
         expect(fieldCheck?.message).toContain('All 1 custom fields exist');
       });
 
-      it('should warn when some custom fields are missing', async () => {
+      it('should pass when some custom fields are missing (will be created)', async () => {
         const config = createMockConfig({
           fields: [
             {
@@ -159,14 +159,13 @@ describe('ConfigurationValidationService', () => {
         const result = await service.validate(config, 'TARGET');
 
         expect(result.compatible).toBe(true);
-        expect(result.severity).toBe('warning');
         const fieldCheck = result.checks.find(c => c.name === 'Custom Fields');
-        expect(fieldCheck?.status).toBe('warning');
-        expect(fieldCheck?.message).toContain('1 of 2 custom fields missing');
+        expect(fieldCheck?.status).toBe('pass');
+        expect(fieldCheck?.message).toContain('1 of 2 custom fields will be created');
         expect(fieldCheck?.details).toContain('Sprint (customfield_10002)');
       });
 
-      it('should warn when all custom fields are missing', async () => {
+      it('should pass when all custom fields are missing (will be created)', async () => {
         const config = createMockConfig({
           fields: [
             {
@@ -188,8 +187,8 @@ describe('ConfigurationValidationService', () => {
         const result = await service.validate(config, 'TARGET');
 
         const fieldCheck = result.checks.find(c => c.name === 'Custom Fields');
-        expect(fieldCheck?.status).toBe('warning');
-        expect(fieldCheck?.message).toContain('None of the 1 custom fields exist');
+        expect(fieldCheck?.status).toBe('pass');
+        expect(fieldCheck?.message).toContain('1 of 1 custom fields will be created');
       });
     });
 
@@ -238,7 +237,7 @@ describe('ConfigurationValidationService', () => {
         expect(check?.status).toBe('pass');
       });
 
-      it('should fail when no issue types exist', async () => {
+      it('should pass when no issue types exist (will be created)', async () => {
         const config = createMockConfig({
           issueTypes: [
             { id: '10001', name: 'Story', subtask: false, hierarchyLevel: 0 },
@@ -252,13 +251,13 @@ describe('ConfigurationValidationService', () => {
 
         const result = await service.validate(config, 'TARGET');
 
-        expect(result.compatible).toBe(false);
+        expect(result.compatible).toBe(true);
         const check = result.checks.find(c => c.name === 'Issue Types');
-        expect(check?.status).toBe('fail');
-        expect(check?.message).toContain('None of the 2 issue types exist');
+        expect(check?.status).toBe('pass');
+        expect(check?.message).toContain('2 of 2 issue types will be created');
       });
 
-      it('should warn when some issue types are missing', async () => {
+      it('should pass when some issue types are missing (will be created)', async () => {
         const config = createMockConfig({
           issueTypes: [
             { id: '10001', name: 'Story', subtask: false, hierarchyLevel: 0 },
@@ -273,8 +272,8 @@ describe('ConfigurationValidationService', () => {
         const result = await service.validate(config, 'TARGET');
 
         const check = result.checks.find(c => c.name === 'Issue Types');
-        expect(check?.status).toBe('warning');
-        expect(check?.message).toContain('1 of 2 issue types missing');
+        expect(check?.status).toBe('pass');
+        expect(check?.message).toContain('1 of 2 issue types will be created');
       });
     });
 
@@ -351,7 +350,7 @@ describe('ConfigurationValidationService', () => {
         expect(check?.status).toBe('pass');
       });
 
-      it('should warn when some statuses are missing', async () => {
+      it('should pass when some statuses are missing (will be created)', async () => {
         const config = createMockConfig({
           workflows: [
             {
@@ -382,8 +381,8 @@ describe('ConfigurationValidationService', () => {
         const result = await service.validate(config, 'TARGET');
 
         const check = result.checks.find(c => c.name === 'Workflows');
-        expect(check?.status).toBe('warning');
-        expect(check?.message).toContain('1 of 3 workflow statuses missing');
+        expect(check?.status).toBe('pass');
+        expect(check?.message).toContain('1 of 3 workflow statuses will be created');
         expect(check?.details).toContain('In Progress (2)');
       });
     });
@@ -483,7 +482,7 @@ describe('ConfigurationValidationService', () => {
       expect(result.diff).toBeNull();
     });
 
-    it('should mark fields as skipped when not in target', async () => {
+    it('should mark fields as new when not in target', async () => {
       const config = createMockConfig({
         fields: [
           {
@@ -504,8 +503,8 @@ describe('ConfigurationValidationService', () => {
 
       const result = await service.validate(config, 'TARGET');
 
-      expect(result.diff!.fields.skipped).toHaveLength(1);
-      expect(result.diff!.fields.skipped[0].reason).toContain('does not exist');
+      expect(result.diff!.fields.new).toHaveLength(1);
+      expect(result.diff!.fields.new[0].reason).toContain('Will be created');
     });
   });
 });

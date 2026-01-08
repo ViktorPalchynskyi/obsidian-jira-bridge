@@ -153,19 +153,10 @@ export class ConfigurationValidationService {
       };
     }
 
-    if (missingFields.length === customFields.length) {
-      return {
-        name: 'Custom Fields',
-        status: 'warning',
-        message: `None of the ${customFields.length} custom fields exist in target project`,
-        details: missingFields,
-      };
-    }
-
     return {
       name: 'Custom Fields',
-      status: 'warning',
-      message: `${missingFields.length} of ${customFields.length} custom fields missing`,
+      status: 'pass',
+      message: `${missingFields.length} of ${customFields.length} custom fields will be created`,
       details: missingFields,
     };
   }
@@ -205,19 +196,10 @@ export class ConfigurationValidationService {
       };
     }
 
-    if (missingTypes.length === config.issueTypes.length) {
-      return {
-        name: 'Issue Types',
-        status: 'fail',
-        message: `None of the ${config.issueTypes.length} issue types exist in target project`,
-        details: missingTypes,
-      };
-    }
-
     return {
       name: 'Issue Types',
-      status: 'warning',
-      message: `${missingTypes.length} of ${config.issueTypes.length} issue types missing`,
+      status: 'pass',
+      message: `${missingTypes.length} of ${config.issueTypes.length} issue types will be created`,
       details: missingTypes,
     };
   }
@@ -270,19 +252,10 @@ export class ConfigurationValidationService {
       };
     }
 
-    if (missingStatuses.length === allStatuses.size) {
-      return {
-        name: 'Workflows',
-        status: 'warning',
-        message: `None of the ${allStatuses.size} workflow statuses exist in target project`,
-        details: missingStatuses,
-      };
-    }
-
     return {
       name: 'Workflows',
-      status: 'warning',
-      message: `${missingStatuses.length} of ${allStatuses.size} workflow statuses missing`,
+      status: 'pass',
+      message: `${missingStatuses.length} of ${allStatuses.size} workflow statuses will be created`,
       details: missingStatuses,
     };
   }
@@ -323,10 +296,10 @@ export class ConfigurationValidationService {
 
       const targetField = targetInfo.fields.get(field.id);
       if (!targetField) {
-        result.skipped.push({
+        result.new.push({
           item: field,
-          status: 'skipped',
-          reason: 'Field does not exist in target project',
+          status: 'new',
+          reason: 'Will be created in target project',
         });
         continue;
       }
@@ -380,10 +353,10 @@ export class ConfigurationValidationService {
           newValue: it.id,
         });
       } else {
-        result.skipped.push({
+        result.new.push({
           item: it,
-          status: 'skipped',
-          reason: 'Issue type does not exist in target project',
+          status: 'new',
+          reason: 'Will be created in target project',
         });
       }
     }
@@ -419,10 +392,10 @@ export class ConfigurationValidationService {
           return !byName;
         }).length;
 
-        result.skipped.push({
+        result.modified.push({
           item: wf,
-          status: 'skipped',
-          reason: `${missingCount} statuses missing in target project`,
+          status: 'modified',
+          reason: `${missingCount} statuses will be created`,
         });
       }
     }

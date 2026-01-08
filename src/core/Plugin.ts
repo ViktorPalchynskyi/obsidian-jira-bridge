@@ -17,6 +17,7 @@ import {
   StatusChangeModal,
   LinkTicketModal,
   ExportFieldConfigModal,
+  ImportConfigurationModal,
 } from '../modals';
 import type { RecentIssue } from '../modals';
 import { parseSummaryFromContent, parseDescriptionFromContent, addFrontmatterFields, readFrontmatterField } from '../utils';
@@ -163,6 +164,13 @@ export class JiraBridgePlugin extends Plugin {
       name: 'Export Field Configuration',
       callback: () => this.openExportFieldConfigModal(),
     });
+
+    this.addCommand({
+      id: 'import-project-configuration',
+      name: 'Import Project Configuration',
+      hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'i' }],
+      callback: () => this.openImportConfigurationModal(),
+    });
   }
 
   private async openExportFieldConfigModal(): Promise<void> {
@@ -175,7 +183,22 @@ export class JiraBridgePlugin extends Plugin {
     const modal = new ExportFieldConfigModal(this.app, {
       instances: this.settings.instances,
       pluginVersion: this.manifest.version,
-      defaultBasePath: 'Jira/Configs',
+      defaultBasePath: this.settings.configExport?.basePath || 'Jira/Configs',
+    });
+
+    await modal.open();
+  }
+
+  private async openImportConfigurationModal(): Promise<void> {
+    const enabledInstances = this.settings.instances.filter(i => i.enabled);
+    if (enabledInstances.length === 0) {
+      new Notice('No Jira instances configured');
+      return;
+    }
+
+    const modal = new ImportConfigurationModal(this.app, {
+      instances: this.settings.instances,
+      defaultBasePath: this.settings.configExport?.basePath || 'Jira/Configs',
     });
 
     await modal.open();

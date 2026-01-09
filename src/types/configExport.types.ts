@@ -102,6 +102,64 @@ export interface IssueTypeConfig {
   hierarchyLevel: number;
 }
 
+export interface BoardColumnStatus {
+  id: string;
+  name: string;
+}
+
+export interface BoardColumn {
+  name: string;
+  statuses: BoardColumnStatus[];
+  min?: number;
+  max?: number;
+}
+
+export interface BoardColumnConfig {
+  columns: BoardColumn[];
+  constraintType?: 'none' | 'issueCount' | 'issueCountExclSubs';
+}
+
+export interface BoardFilter {
+  id: string;
+  name: string;
+  query: string;
+}
+
+export interface BoardQuickFilter {
+  id: string;
+  name: string;
+  query: string;
+  description?: string;
+}
+
+export interface BoardEstimation {
+  type: 'none' | 'field';
+  field?: {
+    fieldId: string;
+    displayName: string;
+  };
+}
+
+export interface BoardSubQuery {
+  query: string;
+}
+
+export interface BoardRanking {
+  rankCustomFieldId: number;
+}
+
+export interface BoardDetailedConfig {
+  id: string;
+  name: string;
+  type: 'scrum' | 'kanban' | 'simple';
+  filter: BoardFilter;
+  subQuery?: BoardSubQuery;
+  columnConfig: BoardColumnConfig;
+  estimation?: BoardEstimation;
+  ranking?: BoardRanking;
+  quickFilters: BoardQuickFilter[];
+}
+
 export interface BoardConfig {
   id: string;
   name: string;
@@ -124,6 +182,7 @@ export interface ExportedProjectConfig {
   workflows: WorkflowConfig[];
   workflowScheme: WorkflowSchemeConfig | null;
   boards: BoardConfig[];
+  boardConfigs: BoardDetailedConfig[];
 }
 
 export interface ConfigurationReference {
@@ -139,6 +198,7 @@ export interface ConfigurationReference {
   fieldsCount: number;
   issueTypesCount: number;
   workflowsCount: number;
+  boardsCount: number;
 }
 
 export type ValidationSeverity = 'error' | 'warning' | 'info';
@@ -178,6 +238,7 @@ export interface ConfigurationDiff {
   fields: DiffCategory<FieldConfig>;
   issueTypes: DiffCategory<IssueTypeConfig>;
   workflows: DiffCategory<WorkflowConfig>;
+  boards: DiffCategory<BoardDetailedConfig>;
 }
 
 export type ApplyStepStatus = 'success' | 'partial' | 'error' | 'skipped';

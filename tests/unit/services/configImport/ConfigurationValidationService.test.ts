@@ -27,6 +27,7 @@ describe('ConfigurationValidationService', () => {
     workflows: [],
     workflowScheme: null,
     boards: [],
+    boardConfigs: [],
     ...overrides,
   });
 
@@ -43,6 +44,7 @@ describe('ConfigurationValidationService', () => {
       getProjectFields: vi.fn().mockResolvedValue([]),
       getIssueTypesForProject: vi.fn().mockResolvedValue([]),
       getProjectStatuses: vi.fn().mockResolvedValue([]),
+      getBoardsForProject: vi.fn().mockResolvedValue([]),
     } as unknown as JiraClient;
 
     service = new ConfigurationValidationService(mockClient);

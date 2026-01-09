@@ -810,6 +810,57 @@ export class JiraClient {
     }
   }
 
+  async addFieldOptions(fieldId: string, contextId: string, options: string[]): Promise<{ id: string; value: string }[]> {
+    if (options.length === 0) {
+      return [];
+    }
+
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl(`/rest/api/3/field/${fieldId}/context/${contextId}/option`),
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({
+        options: options.map(value => ({ value })),
+      }),
+    });
+
+    if (response.status !== 200 && response.status !== 201) {
+      const errorMessage =
+        response.json?.errorMessages?.join(', ') || response.json?.errors
+          ? Object.values(response.json.errors).join(', ')
+          : `Failed to add field options: ${response.status}`;
+      throw new Error(errorMessage);
+    }
+
+    return (response.json.options || []).map((opt: Record<string, unknown>) => ({
+      id: opt.id as string,
+      value: opt.value as string,
+    }));
+  }
+
+  async createFieldContext(fieldId: string, projectIds: string[], issueTypeIds?: string[]): Promise<{ id: string }> {
+    const response: RequestUrlResponse = await requestUrl({
+      url: this.buildUrl(`/rest/api/3/field/${fieldId}/context`),
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({
+        name: `Context for project ${projectIds.join(', ')}`,
+        projectIds,
+        issueTypeIds: issueTypeIds || [],
+      }),
+    });
+
+    if (response.status !== 201 && response.status !== 200) {
+      const errorMessage =
+        response.json?.errorMessages?.join(', ') || response.json?.errors
+          ? Object.values(response.json.errors).join(', ')
+          : `Failed to create field context: ${response.status}`;
+      throw new Error(errorMessage);
+    }
+
+    return { id: response.json.id as string };
+  }
+
   async getWorkflowScheme(projectId: string): Promise<{
     id: string;
     name: string;
@@ -986,6 +1037,28 @@ export class JiraClient {
     }
   }
 
+  async getAllIssueTypes(): Promise<{ id: string; name: string; subtask: boolean }[]> {
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl('/rest/api/3/issuetype'),
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return [];
+      }
+
+      return (response.json || []).map((it: Record<string, unknown>) => ({
+        id: it.id as string,
+        name: it.name as string,
+        subtask: it.subtask as boolean,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
   async createCustomField(params: {
     name: string;
     description?: string;
@@ -1019,22 +1092,60 @@ export class JiraClient {
     };
   }
 
+  async getIssueTypeSchemeForProject(projectId: string): Promise<{ id: string; name: string } | null> {
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl(`/rest/api/3/issuetypescheme/project?projectId=${projectId}`),
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return null;
+      }
+
+      const values = response.json.values || [];
+      if (values.length === 0) {
+        return null;
+      }
+
+      const scheme = values[0].issueTypeScheme;
+      return {
+        id: scheme.id,
+        name: scheme.name,
+      };
+    } catch (error) {
+      console.error(`[JiraClient] getIssueTypeSchemeForProject error:`, error);
+      return null;
+    }
+  }
+
   async createIssueType(params: {
     name: string;
     description?: string;
     type?: 'standard' | 'subtask';
     hierarchyLevel?: number;
+    projectId?: string;
   }): Promise<{ id: string; name: string }> {
+    const body: Record<string, unknown> = {
+      name: params.name,
+      description: params.description || '',
+      type: params.type || 'standard',
+      hierarchyLevel: params.hierarchyLevel ?? 0,
+    };
+
+    if (params.projectId) {
+      body.scope = {
+        type: 'PROJECT',
+        project: { id: params.projectId },
+      };
+    }
+
     const response: RequestUrlResponse = await requestUrl({
       url: this.buildUrl('/rest/api/3/issuetype'),
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({
-        name: params.name,
-        description: params.description || '',
-        type: params.type || 'standard',
-        hierarchyLevel: params.hierarchyLevel ?? 0,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (response.status !== 201) {
@@ -1063,6 +1174,179 @@ export class JiraClient {
 
     if (response.status !== 204 && response.status !== 200) {
       throw new Error(`Failed to add issue type to scheme: ${response.status}`);
+    }
+  }
+
+  async getBoardConfiguration(boardId: string): Promise<{
+    id: number;
+    name: string;
+    type: 'scrum' | 'kanban' | 'simple';
+    filter: { id: string; name: string; query: string };
+    subQuery?: { query: string };
+    columnConfig: {
+      columns: { name: string; statuses: { id: string; name: string }[]; min?: number; max?: number }[];
+      constraintType?: string;
+    };
+    estimation?: { type: string; field?: { fieldId: string; displayName: string } };
+    ranking?: { rankCustomFieldId: number };
+  } | null> {
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl(`/rest/agile/1.0/board/${boardId}/configuration`),
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return null;
+      }
+
+      const config = response.json;
+      return {
+        id: config.id,
+        name: config.name,
+        type: config.type?.toLowerCase() || 'kanban',
+        filter: {
+          id: String(config.filter?.id || ''),
+          name: config.filter?.name || '',
+          query: config.filter?.query || '',
+        },
+        subQuery: config.subQuery ? { query: config.subQuery.query } : undefined,
+        columnConfig: {
+          columns: (config.columnConfig?.columns || []).map((col: Record<string, unknown>) => ({
+            name: col.name as string,
+            statuses: ((col.statuses as Record<string, unknown>[]) || []).map(s => ({
+              id: s.id as string,
+              name: (s.self as string)?.split('/').pop() || (s.id as string),
+            })),
+            min: col.min as number | undefined,
+            max: col.max as number | undefined,
+          })),
+          constraintType: config.columnConfig?.constraintType,
+        },
+        estimation: config.estimation
+          ? {
+              type: config.estimation.type,
+              field: config.estimation.field
+                ? { fieldId: config.estimation.field.fieldId, displayName: config.estimation.field.displayName }
+                : undefined,
+            }
+          : undefined,
+        ranking: config.ranking ? { rankCustomFieldId: config.ranking.rankCustomFieldId } : undefined,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async getBoardQuickFilters(boardId: string): Promise<{ id: string; name: string; query: string; description?: string }[]> {
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl(`/rest/agile/1.0/board/${boardId}/quickfilter`),
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return [];
+      }
+
+      return (response.json.values || []).map((qf: Record<string, unknown>) => ({
+        id: String(qf.id),
+        name: qf.name as string,
+        query: qf.query as string,
+        description: qf.description as string | undefined,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async createBoard(params: {
+    name: string;
+    type: 'scrum' | 'kanban';
+    filterId: string;
+    projectKeyOrId?: string;
+  }): Promise<{ id: string; name: string } | null> {
+    try {
+      const body: Record<string, unknown> = {
+        name: params.name,
+        type: params.type,
+        filterId: parseInt(params.filterId, 10),
+      };
+
+      if (params.projectKeyOrId) {
+        body.location = {
+          type: 'project',
+          projectKeyOrId: params.projectKeyOrId,
+        };
+      }
+
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl('/rest/agile/1.0/board'),
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(body),
+      });
+
+      if (response.status !== 201 && response.status !== 200) {
+        return null;
+      }
+
+      return {
+        id: String(response.json.id),
+        name: response.json.name,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async createFilter(params: { name: string; jql: string; favourite?: boolean }): Promise<{ id: string; name: string } | null> {
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl('/rest/api/3/filter'),
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          name: params.name,
+          jql: params.jql,
+          favourite: params.favourite ?? false,
+        }),
+      });
+
+      if (response.status !== 200 && response.status !== 201) {
+        return null;
+      }
+
+      return {
+        id: String(response.json.id),
+        name: response.json.name,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async getFilter(filterId: string): Promise<{ id: string; name: string; jql: string } | null> {
+    try {
+      const response: RequestUrlResponse = await requestUrl({
+        url: this.buildUrl(`/rest/api/3/filter/${filterId}`),
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status !== 200) {
+        return null;
+      }
+
+      return {
+        id: String(response.json.id),
+        name: response.json.name,
+        jql: response.json.jql || '',
+      };
+    } catch {
+      return null;
     }
   }
 

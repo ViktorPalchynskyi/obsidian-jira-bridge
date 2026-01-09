@@ -8,6 +8,7 @@ import type {
   PriorityConfig,
   IssueTypeConfig,
   BoardConfig,
+  BoardDetailedConfig,
   ExportProgressCallback,
 } from '../../types/configExport.types';
 import { JiraClient } from '../../api/JiraClient';
@@ -89,9 +90,12 @@ export class ProjectExportService {
     }
 
     let boards: BoardConfig[] = [];
+    let boardConfigs: BoardDetailedConfig[] = [];
     if (options.includeBoards) {
       progress('Fetching boards', currentStep++, totalSteps);
-      boards = await this.fetchBoards(projectKey);
+      const boardData = await this.fetchBoardsWithConfig(projectKey);
+      boards = boardData.boards;
+      boardConfigs = boardData.boardConfigs;
     }
 
     const meta: ExportMeta = {
@@ -118,6 +122,7 @@ export class ProjectExportService {
       workflows,
       workflowScheme,
       boards,
+      boardConfigs,
     };
   }
 
@@ -144,13 +149,58 @@ export class ProjectExportService {
       }));
   }
 
-  private async fetchBoards(projectKey: string): Promise<BoardConfig[]> {
+  private async fetchBoardsWithConfig(projectKey: string): Promise<{ boards: BoardConfig[]; boardConfigs: BoardDetailedConfig[] }> {
     const boards = await this.client.getBoardsForProject(projectKey);
-    return boards.map(b => ({
+    const basicBoards: BoardConfig[] = boards.map(b => ({
       id: b.id,
       name: b.name,
       type: b.type,
     }));
+
+    const boardConfigs: BoardDetailedConfig[] = [];
+
+    for (const board of boards) {
+      const config = await this.client.getBoardConfiguration(board.id);
+      if (!config) continue;
+
+      const quickFilters = await this.client.getBoardQuickFilters(board.id);
+
+      boardConfigs.push({
+        id: board.id,
+        name: board.name,
+        type: board.type,
+        filter: {
+          id: config.filter.id,
+          name: config.filter.name,
+          query: config.filter.query,
+        },
+        subQuery: config.subQuery,
+        columnConfig: {
+          columns: config.columnConfig.columns.map(col => ({
+            name: col.name,
+            statuses: col.statuses.map(s => ({ id: s.id, name: s.name })),
+            min: col.min,
+            max: col.max,
+          })),
+          constraintType: config.columnConfig.constraintType as BoardDetailedConfig['columnConfig']['constraintType'],
+        },
+        estimation: config.estimation
+          ? {
+              type: config.estimation.type as 'none' | 'field',
+              field: config.estimation.field,
+            }
+          : undefined,
+        ranking: config.ranking,
+        quickFilters: quickFilters.map(qf => ({
+          id: qf.id,
+          name: qf.name,
+          query: qf.query,
+          description: qf.description,
+        })),
+      });
+    }
+
+    return { boards: basicBoards, boardConfigs };
   }
 
   async saveToVault(config: ExportedProjectConfig, basePath: string): Promise<string> {
@@ -419,11 +469,69 @@ export class ProjectExportService {
 
     lines.push(`# Boards: ${config.meta.projectKey}`);
     lines.push('');
+    lines.push('## Summary');
+    lines.push('');
     lines.push('| Name | ID | Type |');
     lines.push('|------|-----|------|');
 
     for (const board of config.boards) {
       lines.push(`| ${board.name} | ${board.id} | ${board.type} |`);
+    }
+
+    lines.push('');
+
+    if (config.boardConfigs.length > 0) {
+      lines.push('## Detailed Configuration');
+      lines.push('');
+
+      for (const boardConfig of config.boardConfigs) {
+        lines.push(`### ${boardConfig.name}`);
+        lines.push('');
+        lines.push(`- **ID:** ${boardConfig.id}`);
+        lines.push(`- **Type:** ${boardConfig.type}`);
+        lines.push(`- **Filter:** ${boardConfig.filter.name} (ID: ${boardConfig.filter.id})`);
+        lines.push(`- **Filter JQL:** \`${boardConfig.filter.query}\``);
+
+        if (boardConfig.subQuery) {
+          lines.push(`- **Sub-query:** \`${boardConfig.subQuery.query}\``);
+        }
+
+        if (boardConfig.estimation) {
+          lines.push(
+            `- **Estimation:** ${boardConfig.estimation.type}${boardConfig.estimation.field ? ` (${boardConfig.estimation.field.displayName})` : ''}`,
+          );
+        }
+
+        lines.push('');
+        lines.push('#### Columns');
+        lines.push('');
+        lines.push('| Column | Statuses | Min | Max |');
+        lines.push('|--------|----------|-----|-----|');
+
+        for (const col of boardConfig.columnConfig.columns) {
+          const statusNames = col.statuses.map(s => s.name || s.id).join(', ');
+          lines.push(`| ${col.name} | ${statusNames || '-'} | ${col.min ?? '-'} | ${col.max ?? '-'} |`);
+        }
+
+        if (boardConfig.columnConfig.constraintType) {
+          lines.push('');
+          lines.push(`**Constraint Type:** ${boardConfig.columnConfig.constraintType}`);
+        }
+
+        if (boardConfig.quickFilters.length > 0) {
+          lines.push('');
+          lines.push('#### Quick Filters');
+          lines.push('');
+          lines.push('| Name | Query |');
+          lines.push('|------|-------|');
+
+          for (const qf of boardConfig.quickFilters) {
+            lines.push(`| ${qf.name} | \`${qf.query}\` |`);
+          }
+        }
+
+        lines.push('');
+      }
     }
 
     return lines.join('\n');

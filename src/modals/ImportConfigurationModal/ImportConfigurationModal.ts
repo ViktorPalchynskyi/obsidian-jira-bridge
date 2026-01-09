@@ -13,7 +13,7 @@ import type {
 } from '../../types';
 import { JiraClient } from '../../api/JiraClient';
 import { ConfigDiscoveryService } from '../../services/configExport';
-import { ConfigurationValidationService } from '../../services/configImport';
+import { ConfigurationValidationService, ConfigurationApplyService } from '../../services/configImport';
 
 interface ImportConfigurationModalOptions {
   instances: JiraInstance[];
@@ -213,6 +213,10 @@ export class ImportConfigurationModal extends BaseModal<ImportModalResult> {
       stats.createSpan({ text: `${config.issueTypesCount} issue types` });
       stats.createSpan({ text: ' • ' });
       stats.createSpan({ text: `${config.workflowsCount} workflows` });
+      if (config.boardsCount > 0) {
+        stats.createSpan({ text: ' • ' });
+        stats.createSpan({ text: `${config.boardsCount} boards` });
+      }
 
       item.addEventListener('click', () => {
         this.state.selectedConfig = config;
@@ -450,10 +454,12 @@ export class ImportConfigurationModal extends BaseModal<ImportModalResult> {
     const summary = container.createDiv('diff-summary');
 
     const counts = {
-      new: diff.fields.new.length + diff.issueTypes.new.length + diff.workflows.new.length,
-      modified: diff.fields.modified.length + diff.issueTypes.modified.length + diff.workflows.modified.length,
-      skipped: diff.fields.skipped.length + diff.issueTypes.skipped.length + diff.workflows.skipped.length,
-      unchanged: diff.fields.unchanged.length + diff.issueTypes.unchanged.length + diff.workflows.unchanged.length,
+      new: diff.fields.new.length + diff.issueTypes.new.length + diff.workflows.new.length + diff.boards.new.length,
+      modified:
+        diff.fields.modified.length + diff.issueTypes.modified.length + diff.workflows.modified.length + diff.boards.modified.length,
+      skipped: diff.fields.skipped.length + diff.issueTypes.skipped.length + diff.workflows.skipped.length + diff.boards.skipped.length,
+      unchanged:
+        diff.fields.unchanged.length + diff.issueTypes.unchanged.length + diff.workflows.unchanged.length + diff.boards.unchanged.length,
     };
 
     if (counts.new > 0) {
@@ -477,6 +483,7 @@ export class ImportConfigurationModal extends BaseModal<ImportModalResult> {
     this.renderDiffSection(sections, 'Fields', diff.fields);
     this.renderDiffSection(sections, 'Issue Types', diff.issueTypes);
     this.renderDiffSection(sections, 'Workflows', diff.workflows);
+    this.renderDiffSection(sections, 'Boards', diff.boards);
   }
 
   private renderDiffSection<T extends { name?: string; id: string }>(
@@ -489,13 +496,13 @@ export class ImportConfigurationModal extends BaseModal<ImportModalResult> {
       unchanged: { item: T; reason?: string }[];
     },
   ): void {
-    const total = category.new.length + category.modified.length + category.skipped.length + category.unchanged.length;
-    if (total === 0) return;
+    const actionable = category.new.length + category.modified.length + category.skipped.length;
+    if (actionable === 0) return;
 
     const section = container.createDiv('diff-section');
     const header = section.createDiv('diff-section-header');
     header.createSpan({ text: title, cls: 'section-title' });
-    header.createSpan({ text: `(${total})`, cls: 'section-count' });
+    header.createSpan({ text: `(${actionable})`, cls: 'section-count' });
 
     const content = section.createDiv('diff-section-content');
     let isExpanded = false;
@@ -571,8 +578,14 @@ export class ImportConfigurationModal extends BaseModal<ImportModalResult> {
       const modified =
         this.state.diffPreview.fields.modified.length +
         this.state.diffPreview.issueTypes.modified.length +
-        this.state.diffPreview.workflows.modified.length;
-      changesRow.createSpan({ text: `${modified} items will be updated` });
+        this.state.diffPreview.workflows.modified.length +
+        this.state.diffPreview.boards.modified.length;
+      const newItems =
+        this.state.diffPreview.fields.new.length +
+        this.state.diffPreview.issueTypes.new.length +
+        this.state.diffPreview.workflows.new.length +
+        this.state.diffPreview.boards.new.length;
+      changesRow.createSpan({ text: `${newItems} new, ${modified} modified` });
     }
 
     this.renderApplyOptions(container);
@@ -694,15 +707,74 @@ export class ImportConfigurationModal extends BaseModal<ImportModalResult> {
   }
 
   private async applyImport(): Promise<void> {
-    new Notice('Import functionality will be implemented in US-10.6');
+    if (!this.state.selectedConfig || !this.state.targetInstanceId || !this.state.targetProjectKey || !this.state.diffPreview) {
+      new Notice('Missing required data for import');
+      return;
+    }
 
-    this.submit({
-      success: true,
-      backupPath: '',
-      appliedCount: 0,
-      skippedCount: 0,
-      manualSteps: [],
-    });
+    const { contentEl } = this;
+    const existingContent = contentEl.querySelector('.wizard-content');
+    if (existingContent) {
+      existingContent.empty();
+      const loading = existingContent.createDiv('loading-state');
+      const iconSpan = loading.createSpan('loading-icon');
+      setIcon(iconSpan, 'loader');
+      iconSpan.addClass('spin');
+      loading.createSpan({ text: 'Applying configuration...' });
+    }
+
+    try {
+      const config = await this.discoveryService.getConfigByPath(this.state.selectedConfig.folderPath);
+      if (!config) {
+        throw new Error('Failed to load configuration');
+      }
+
+      const instance = this.options.instances.find(i => i.id === this.state.targetInstanceId);
+      if (!instance) {
+        throw new Error('Instance not found');
+      }
+
+      const client = new JiraClient(instance);
+      const applyService = new ConfigurationApplyService(this.app, client);
+
+      const result = await applyService.apply(config, this.state.targetProjectKey!, this.state.diffPreview, this.state.applyOptions);
+
+      let appliedCount = 0;
+      let skippedCount = 0;
+
+      for (const stepResult of result.results) {
+        for (const itemResult of stepResult.results) {
+          if (itemResult.status === 'success') {
+            appliedCount++;
+          } else if (itemResult.status === 'skipped') {
+            skippedCount++;
+          }
+        }
+      }
+
+      if (result.success) {
+        new Notice(`Configuration imported successfully. ${appliedCount} items applied.`);
+      } else {
+        new Notice(`Configuration import completed with errors. Check the results.`);
+      }
+
+      this.submit({
+        success: result.success,
+        backupPath: result.backupPath,
+        appliedCount,
+        skippedCount,
+        manualSteps: result.manualSteps,
+      });
+    } catch (error) {
+      new Notice(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      if (existingContent) {
+        existingContent.empty();
+        existingContent.createEl('p', {
+          text: `Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          cls: 'error-text',
+        });
+      }
+    }
   }
 
   private formatDate(dateStr: string): string {

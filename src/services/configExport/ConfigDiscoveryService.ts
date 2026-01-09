@@ -42,6 +42,7 @@ export class ConfigDiscoveryService {
           fieldsCount: config.fields?.length || 0,
           issueTypesCount: config.issueTypes?.length || 0,
           workflowsCount: config.workflows?.length || 0,
+          boardsCount: config.boardConfigs?.length || config.boards?.length || 0,
         });
       } catch {
         continue;

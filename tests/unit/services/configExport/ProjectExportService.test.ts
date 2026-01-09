@@ -18,6 +18,8 @@ const mockGetWorkflows = vi.fn();
 const mockGetProjectStatuses = vi.fn();
 const mockGetIssueTypesForProject = vi.fn();
 const mockGetBoardsForProject = vi.fn();
+const mockGetBoardConfiguration = vi.fn();
+const mockGetBoardQuickFilters = vi.fn();
 
 vi.mock('../../../../src/api/JiraClient', () => ({
   JiraClient: vi.fn().mockImplementation(() => ({
@@ -33,6 +35,8 @@ vi.mock('../../../../src/api/JiraClient', () => ({
     getProjectStatuses: mockGetProjectStatuses,
     getIssueTypesForProject: mockGetIssueTypesForProject,
     getBoardsForProject: mockGetBoardsForProject,
+    getBoardConfiguration: mockGetBoardConfiguration,
+    getBoardQuickFilters: mockGetBoardQuickFilters,
   })),
 }));
 
@@ -129,6 +133,21 @@ describe('ProjectExportService', () => {
     mockGetBoardsForProject.mockResolvedValue([
       { id: '1', name: 'TEST Board', type: 'scrum' },
     ]);
+
+    mockGetBoardConfiguration.mockResolvedValue({
+      id: 1,
+      name: 'TEST Board',
+      type: 'scrum',
+      filter: { id: '10001', name: 'TEST Filter', query: 'project = TEST' },
+      columnConfig: {
+        columns: [
+          { name: 'To Do', statuses: [{ id: '1', name: 'To Do' }] },
+          { name: 'Done', statuses: [{ id: '3', name: 'Done' }] },
+        ],
+      },
+    });
+
+    mockGetBoardQuickFilters.mockResolvedValue([]);
   });
 
   describe('exportProjectConfig', () => {

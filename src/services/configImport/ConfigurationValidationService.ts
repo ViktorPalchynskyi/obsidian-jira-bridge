@@ -10,6 +10,7 @@ import type {
   IssueTypeConfig,
   WorkflowConfig,
   WorkflowStatus,
+  BoardDetailedConfig,
 } from '../../types';
 
 interface TargetProjectInfo {
@@ -19,6 +20,7 @@ interface TargetProjectInfo {
   fields: Map<string, { id: string; name: string; custom: boolean }>;
   issueTypes: Map<string, { id: string; name: string }>;
   statuses: Map<string, { id: string; name: string }>;
+  boards: Map<string, { id: string; name: string; type: string }>;
 }
 
 export class ConfigurationValidationService {
@@ -50,6 +52,10 @@ export class ConfigurationValidationService {
     if (workflowCheck.status === 'fail') hasError = true;
     if (workflowCheck.status === 'warning') hasWarning = true;
 
+    const boardCheck = this.validateBoards(config, targetInfo);
+    checks.push(boardCheck);
+    if (boardCheck.status === 'warning') hasWarning = true;
+
     let severity: ValidationSeverity = 'info';
     if (hasWarning) severity = 'warning';
     if (hasError) severity = 'error';
@@ -69,6 +75,7 @@ export class ConfigurationValidationService {
     const projectFields = await this.client.getProjectFields(project.id);
     const issueTypes = await this.client.getIssueTypesForProject(projectKey);
     const projectStatuses = await this.client.getProjectStatuses(projectKey);
+    const projectBoards = await this.client.getBoardsForProject(projectKey);
 
     const fields = new Map<string, { id: string; name: string; custom: boolean }>();
     for (const field of projectFields) {
@@ -87,6 +94,11 @@ export class ConfigurationValidationService {
       }
     }
 
+    const boards = new Map<string, { id: string; name: string; type: string }>();
+    for (const board of projectBoards) {
+      boards.set(board.id, { id: board.id, name: board.name, type: board.type });
+    }
+
     return {
       projectKey,
       projectId: project.id,
@@ -94,6 +106,7 @@ export class ConfigurationValidationService {
       fields,
       issueTypes: issueTypeMap,
       statuses,
+      boards,
     };
   }
 
@@ -273,6 +286,7 @@ export class ConfigurationValidationService {
       fields: this.generateFieldDiff(config.fields, targetInfo),
       issueTypes: this.generateIssueTypeDiff(config.issueTypes, targetInfo),
       workflows: this.generateWorkflowDiff(config.workflows, targetInfo),
+      boards: this.generateBoardDiff(config.boardConfigs || [], targetInfo),
     };
   }
 
@@ -396,6 +410,79 @@ export class ConfigurationValidationService {
           item: wf,
           status: 'modified',
           reason: `${missingCount} statuses will be created`,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  private validateBoards(config: ExportedProjectConfig, targetInfo: TargetProjectInfo): ValidationCheck {
+    const boardConfigs = config.boardConfigs || [];
+    if (boardConfigs.length === 0) {
+      return {
+        name: 'Boards',
+        status: 'pass',
+        message: 'No boards to validate',
+        details: null,
+      };
+    }
+
+    const existingBoards: string[] = [];
+    const newBoards: string[] = [];
+
+    for (const board of boardConfigs) {
+      const byName = Array.from(targetInfo.boards.values()).find(
+        b => b.name.toLowerCase() === board.name.toLowerCase() && b.type === board.type,
+      );
+      if (byName) {
+        existingBoards.push(board.name);
+      } else {
+        newBoards.push(`${board.name} (${board.type})`);
+      }
+    }
+
+    if (newBoards.length === 0) {
+      return {
+        name: 'Boards',
+        status: 'pass',
+        message: `All ${boardConfigs.length} boards exist in target project`,
+        details: null,
+      };
+    }
+
+    return {
+      name: 'Boards',
+      status: 'warning',
+      message: `${newBoards.length} of ${boardConfigs.length} boards will be created`,
+      details: newBoards,
+    };
+  }
+
+  private generateBoardDiff(boardConfigs: BoardDetailedConfig[], targetInfo: TargetProjectInfo): DiffCategory<BoardDetailedConfig> {
+    const result: DiffCategory<BoardDetailedConfig> = {
+      new: [],
+      modified: [],
+      skipped: [],
+      unchanged: [],
+    };
+
+    for (const board of boardConfigs) {
+      const byName = Array.from(targetInfo.boards.values()).find(
+        b => b.name.toLowerCase() === board.name.toLowerCase() && b.type === board.type,
+      );
+
+      if (byName) {
+        result.unchanged.push({
+          item: board,
+          status: 'unchanged',
+          reason: 'Board with same name and type exists',
+        });
+      } else {
+        result.new.push({
+          item: board,
+          status: 'new',
+          reason: 'Will be created with filter and columns',
         });
       }
     }

@@ -18,6 +18,7 @@ import {
   LinkTicketModal,
   ExportFieldConfigModal,
   ImportConfigurationModal,
+  ProjectComparisonModal,
 } from '../modals';
 import type { RecentIssue } from '../modals';
 import { parseSummaryFromContent, parseDescriptionFromContent, addFrontmatterFields, readFrontmatterField } from '../utils';
@@ -171,6 +172,12 @@ export class JiraBridgePlugin extends Plugin {
       hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'i' }],
       callback: () => this.openImportConfigurationModal(),
     });
+
+    this.addCommand({
+      id: 'compare-jira-projects',
+      name: 'Compare Jira Projects',
+      callback: () => this.openProjectComparisonModal(),
+    });
   }
 
   private async openExportFieldConfigModal(): Promise<void> {
@@ -199,6 +206,20 @@ export class JiraBridgePlugin extends Plugin {
     const modal = new ImportConfigurationModal(this.app, {
       instances: this.settings.instances,
       defaultBasePath: this.settings.configExport?.basePath || 'Jira/Configs',
+    });
+
+    await modal.open();
+  }
+
+  private async openProjectComparisonModal(): Promise<void> {
+    const enabledInstances = this.settings.instances.filter(i => i.enabled);
+    if (enabledInstances.length === 0) {
+      new Notice('No Jira instances configured');
+      return;
+    }
+
+    const modal = new ProjectComparisonModal(this.app, {
+      instances: this.settings.instances,
     });
 
     await modal.open();

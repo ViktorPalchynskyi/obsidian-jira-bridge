@@ -9,11 +9,6 @@ export interface PluginSettings {
   createTicket: CreateTicketSettings;
   advanced: AdvancedSettings;
   recentIssues: RecentIssueEntry[];
-  configExport: ConfigExportSettings;
-}
-
-export interface ConfigExportSettings {
-  basePath: string;
 }
 
 export interface RecentIssueEntry {

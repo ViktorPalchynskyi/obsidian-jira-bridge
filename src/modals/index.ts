@@ -23,7 +23,5 @@ export { SyncSettingsModal } from './SyncSettingsModal/SyncSettingsModal';
 export type { SyncSettingsModalOptions, SyncSettingsModalResult } from './SyncSettingsModal/types';
 export { LinkTicketModal } from './LinkTicketModal/LinkTicketModal';
 export type { LinkTicketModalOptions, LinkTicketModalResult } from './LinkTicketModal/types';
-export { ExportFieldConfigModal } from './ExportFieldConfigModal';
-export { ImportConfigurationModal } from './ImportConfigurationModal';
 export { ProjectComparisonModal } from './ProjectComparisonModal';
 export type { ProjectComparisonModalOptions } from './ProjectComparisonModal';

@@ -15,6 +15,7 @@ import type {
 } from '../types';
 import type { TestConnectionResult, JiraUser } from './types';
 import { markdownToAdf } from '../utils/markdownToAdf';
+import { mapJiraError } from '../utils/errorMessages';
 
 export class JiraClient {
   constructor(private instance: JiraInstance) {}
@@ -478,22 +479,7 @@ export class JiraClient {
   }
 
   private parseError(error: unknown): string {
-    if (error instanceof Error) {
-      if (error.message.includes('401')) {
-        return 'Invalid credentials. Check your email and API token.';
-      }
-      if (error.message.includes('403')) {
-        return 'Access forbidden. Check your permissions.';
-      }
-      if (error.message.includes('404')) {
-        return 'Jira instance not found. Check the URL.';
-      }
-      if (error.message.includes('net::')) {
-        return 'Network error. Check your internet connection.';
-      }
-      return error.message;
-    }
-    return 'Unknown error occurred';
+    return mapJiraError(error);
   }
 
   async getBoardsForProject(projectKey: string): Promise<JiraBoard[]> {

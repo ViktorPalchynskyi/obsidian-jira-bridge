@@ -117,7 +117,7 @@ describe('JiraClient', () => {
       const result = await client.testConnection();
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Invalid credentials. Check your email and API token.');
+      expect(result.error).toBe('Invalid credentials. Check your API token in settings.');
       expect(result.user).toBeUndefined();
     });
 
@@ -130,7 +130,7 @@ describe('JiraClient', () => {
       const result = await client.testConnection();
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Access forbidden. Check your permissions.');
+      expect(result.error).toBe("You don't have permission for this action.");
     });
 
     it('should return error for 404 response', async () => {
@@ -142,7 +142,7 @@ describe('JiraClient', () => {
       const result = await client.testConnection();
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Jira instance not found. Check the URL.');
+      expect(result.error).toBe('Resource not found. Check if the issue or project exists.');
     });
 
     it('should return error for network errors', async () => {
@@ -154,7 +154,7 @@ describe('JiraClient', () => {
       const result = await client.testConnection();
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Network error. Check your internet connection.');
+      expect(result.error).toBe('Cannot reach Jira. Check your internet connection.');
     });
 
     it('should return generic error for unknown errors', async () => {
@@ -166,7 +166,7 @@ describe('JiraClient', () => {
       const result = await client.testConnection();
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Something unexpected happened');
+      expect(result.error).toBe('An unexpected error occurred. Please try again.');
     });
   });
 

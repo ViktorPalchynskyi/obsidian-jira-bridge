@@ -3,7 +3,7 @@ import { BaseModal } from '../base/BaseModal';
 import type { StatusChangeResult, StatusChangeModalOptions } from './types';
 import type { JiraTransition, JiraStatus, JiraSprint, JiraBoard } from '../../types';
 import { JiraClient } from '../../api/JiraClient';
-import { debounce, type DebouncedFunction } from '../../utils';
+import { debounce, mapJiraError, NOTICE_DURATION, type DebouncedFunction } from '../../utils';
 
 interface ModalState {
   issueKey: string;
@@ -505,11 +505,10 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
     try {
       await this.client.moveToSprint([this.state.issueKey], sprintId);
       const sprint = this.state.availableSprints.find(s => s.id === sprintId);
-      new Notice(`${this.state.issueKey} → ${sprint?.name || 'Sprint'}`, 3000);
+      new Notice(`${this.state.issueKey} → ${sprint?.name || 'Sprint'}`, NOTICE_DURATION.success);
       await this.loadSprintInfo();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to move to sprint';
-      new Notice(`Error: ${message}`, 5000);
+      new Notice(mapJiraError(error), NOTICE_DURATION.error);
     }
   }
 
@@ -518,11 +517,10 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
 
     try {
       await this.client.moveToBacklog([this.state.issueKey], this.state.board.id);
-      new Notice(`${this.state.issueKey} → Backlog`, 3000);
+      new Notice(`${this.state.issueKey} → Backlog`, NOTICE_DURATION.success);
       await this.loadSprintInfo();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to move to backlog';
-      new Notice(`Error: ${message}`, 5000);
+      new Notice(mapJiraError(error), NOTICE_DURATION.error);
     }
   }
 
@@ -531,11 +529,10 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
 
     try {
       await this.client.moveToBoard([this.state.issueKey], this.state.board.id);
-      new Notice(`${this.state.issueKey} → ${this.state.board.name}`, 3000);
+      new Notice(`${this.state.issueKey} → ${this.state.board.name}`, NOTICE_DURATION.success);
       await this.loadSprintInfo();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to move to board';
-      new Notice(`Error: ${message}`, 5000);
+      new Notice(mapJiraError(error), NOTICE_DURATION.error);
     }
   }
 
@@ -612,7 +609,13 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
 
   private updateSubmitButton(): void {
     if (!this.submitButton) return;
-    this.submitButton.disabled = !this.state.selectedTransitionId || this.state.isSubmitting || this.state.isLoadingTransitions;
+    const disabled = !this.state.selectedTransitionId || this.state.isSubmitting || this.state.isLoadingTransitions;
+    this.submitButton.disabled = disabled;
+    if (this.state.isSubmitting) {
+      this.submitButton.addClass('is-loading');
+    } else {
+      this.submitButton.removeClass('is-loading');
+    }
   }
 
   private setupKeyboardNavigation(): void {
@@ -648,7 +651,7 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
     try {
       await this.client.transitionIssue(this.state.issueKey, this.state.selectedTransitionId);
 
-      new Notice(`${this.state.issueKey} → ${transition.to.name}`, 5000);
+      new Notice(`${this.state.issueKey} → ${transition.to.name}`, NOTICE_DURATION.success);
 
       this.submit({
         issueKey: this.state.issueKey,
@@ -657,8 +660,7 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
         newStatusName: transition.to.name,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to change status';
-      new Notice(`Error: ${message}`, 5000);
+      new Notice(mapJiraError(error), NOTICE_DURATION.error);
       this.state.isSubmitting = false;
       this.updateSubmitButton();
       if (this.submitButton) {

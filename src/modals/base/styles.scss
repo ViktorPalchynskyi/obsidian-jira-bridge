@@ -32,4 +32,38 @@
   .error {
     color: var(--text-error);
   }
+
+  button.is-loading {
+    position: relative;
+    pointer-events: none;
+
+    &::before {
+      content: '';
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: jira-spin 0.75s linear infinite;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+  }
+
+  select.is-loading,
+  input.is-loading {
+    opacity: 0.6;
+    pointer-events: none;
+    background-color: var(--background-modifier-form-field);
+  }
+}
+
+@keyframes jira-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

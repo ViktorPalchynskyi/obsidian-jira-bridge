@@ -3,6 +3,7 @@ import { BaseModal } from '../base/BaseModal';
 import { JiraClient } from '../../api';
 import type { JiraProject, JiraIssueType, JiraPriority, JiraFieldMeta } from '../../types';
 import type { CreateTicketModalOptions, CreateTicketResult } from './types';
+import { mapJiraError, NOTICE_DURATION } from '../../utils';
 
 interface FormState {
   summary: string;
@@ -436,8 +437,7 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
         issueUrl,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to create issue';
-      this.showError(message);
+      this.showError(mapJiraError(error));
       this.state.isSubmitting = false;
       this.updateSubmitButton('Create', false);
     }
@@ -447,6 +447,11 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     if (!this.submitButton) return;
     this.submitButton.textContent = text;
     this.submitButton.disabled = disabled;
+    if (disabled) {
+      this.submitButton.addClass('is-loading');
+    } else {
+      this.submitButton.removeClass('is-loading');
+    }
   }
 
   private showSuccessNotice(issueKey: string, issueUrl: string): void {
@@ -492,7 +497,7 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
   }
 
   private showError(message: string): void {
-    new Notice(`Error: ${message}`, 5000);
+    new Notice(message, NOTICE_DURATION.error);
   }
 
   private hasCustomFields(): boolean {

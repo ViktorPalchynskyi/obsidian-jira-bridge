@@ -19,7 +19,14 @@ import {
   ProjectComparisonModal,
 } from '../modals';
 import type { RecentIssue } from '../modals';
-import { parseSummaryFromContent, parseDescriptionFromContent, addFrontmatterFields, readFrontmatterField } from '../utils';
+import {
+  parseSummaryFromContent,
+  parseDescriptionFromContent,
+  addFrontmatterFields,
+  readFrontmatterField,
+  mapJiraError,
+  NOTICE_DURATION,
+} from '../utils';
 import { BulkCreateService } from '../services/bulkCreate';
 import { BulkStatusChangeService } from '../services/bulkStatusChange';
 import { SyncService } from '../services/sync';
@@ -553,12 +560,12 @@ export class JiraBridgePlugin extends Plugin {
 
         if (syncResult.success) {
           if (syncResult.changes.length > 0) {
-            new Notice(`Synced ${result.issueKey}: ${syncResult.changes.length} field(s) updated`);
+            new Notice(`Synced ${result.issueKey}: ${syncResult.changes.length} field(s) updated`, NOTICE_DURATION.success);
           } else {
-            new Notice(`${result.issueKey} is up to date`);
+            new Notice(`${result.issueKey} is up to date`, NOTICE_DURATION.info);
           }
         } else {
-          new Notice(`Failed to sync: ${syncResult.error || 'Unknown error'}`);
+          new Notice(`Failed to sync: ${syncResult.error || 'Unknown error'}`, NOTICE_DURATION.error);
         }
         return;
       }
@@ -577,9 +584,9 @@ export class JiraBridgePlugin extends Plugin {
       const syncResult = await syncService.syncNote(activeFile, { force: true });
 
       if (syncResult.success && syncResult.changes.length > 0) {
-        new Notice(`Linked to ${result.issueKey}, synced ${syncResult.changes.length} field(s)`);
+        new Notice(`Linked to ${result.issueKey}, synced ${syncResult.changes.length} field(s)`, NOTICE_DURATION.success);
       } else {
-        new Notice(`Linked to ${result.issueKey}`);
+        new Notice(`Linked to ${result.issueKey}`, NOTICE_DURATION.success);
       }
     }
   }
@@ -619,7 +626,7 @@ export class JiraBridgePlugin extends Plugin {
   private async syncCurrentNote(): Promise<void> {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new Notice('No active file');
+      new Notice('No active file', NOTICE_DURATION.warning);
       return;
     }
 
@@ -629,29 +636,29 @@ export class JiraBridgePlugin extends Plugin {
 
       if (result.skipped) {
         if (result.skipReason === 'no_issue_id') {
-          new Notice('No issue linked to this note');
+          new Notice('No issue linked to this note', NOTICE_DURATION.warning);
         } else if (result.skipReason === 'no_instance_mapping') {
-          new Notice('No Jira instance configured for this folder');
+          new Notice('No Jira instance configured for this folder', NOTICE_DURATION.warning);
         } else if (result.skipReason === 'sync_disabled') {
-          new Notice('Sync is disabled. Enable it in Advanced Config.');
+          new Notice('Sync is disabled. Enable it in Advanced Config.', NOTICE_DURATION.warning);
         } else {
-          new Notice(`Sync skipped: ${result.skipReason}`);
+          new Notice(`Sync skipped: ${result.skipReason}`, NOTICE_DURATION.warning);
         }
         return;
       }
 
       if (result.success) {
         if (result.changes.length > 0) {
-          new Notice(`Synced ${result.ticketKey}: ${result.changes.length} field(s) updated`);
+          new Notice(`Synced ${result.ticketKey}: ${result.changes.length} field(s) updated`, NOTICE_DURATION.success);
         } else {
-          new Notice(`${result.ticketKey} is up to date`);
+          new Notice(`${result.ticketKey} is up to date`, NOTICE_DURATION.info);
         }
       } else {
-        new Notice(`Failed to sync: ${result.error || 'Unknown error'}`);
+        new Notice(`Failed to sync: ${result.error || 'Unknown error'}`, NOTICE_DURATION.error);
       }
     } catch (error) {
       console.error('Sync error:', error);
-      new Notice(`Sync error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      new Notice(mapJiraError(error), NOTICE_DURATION.error);
     }
   }
 
@@ -660,11 +667,11 @@ export class JiraBridgePlugin extends Plugin {
     const stats = await syncService.syncAllOpenNotes({ force: true });
 
     if (stats.total === 0) {
-      new Notice('No open notes with linked issues');
+      new Notice('No open notes with linked issues', NOTICE_DURATION.info);
       return;
     }
 
-    new Notice(`Synced ${stats.synced}/${stats.total} notes, ${stats.changes} field(s) updated`);
+    new Notice(`Synced ${stats.synced}/${stats.total} notes, ${stats.changes} field(s) updated`, NOTICE_DURATION.success);
   }
 
   private async handleBulkCreateFromSelection(files: TFile[]): Promise<void> {

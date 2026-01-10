@@ -2,6 +2,7 @@ import { App, debounce } from 'obsidian';
 import { BaseModal } from '../base/BaseModal';
 import type { LinkTicketModalOptions, LinkTicketModalResult, SearchIssueResult } from './types';
 import { JiraClient } from '../../api/JiraClient';
+import { mapJiraError } from '../../utils';
 
 interface ModalState {
   selectedInstanceId: string;
@@ -138,7 +139,7 @@ export class LinkTicketModal extends BaseModal<LinkTicketModalResult> {
         issueType: issue.issueType?.name || 'Unknown',
       }));
     } catch (error) {
-      this.state.error = error instanceof Error ? error.message : 'Failed to search issues';
+      this.state.error = mapJiraError(error);
       this.state.searchResults = [];
     } finally {
       this.state.isSearching = false;

@@ -1,11 +1,11 @@
 import { App, TFile, TFolder, Notice, FileView } from 'obsidian';
-import type { PluginSettings, SyncFieldConfig, SyncResult, SyncStats, SyncChange } from '../../types';
+import type { PluginSettings, SyncFieldConfig, SyncResult, SyncStats, SyncChange } from '../../../types';
 import type { SyncOptions, SyncCache, SyncContext } from './types';
-import type { ResolvedContext } from '../../types/mapping.types';
-import { MappingResolver } from '../../mapping';
-import { JiraClient } from '../../api/JiraClient';
-import type { EventBus } from '../../core/EventBus';
-import { addFrontmatterFields } from '../../utils/frontmatter';
+import type { ResolvedContext } from '../../../types/mapping.types';
+import { MappingResolver } from '../../../mapping';
+import { JiraClient } from '../../../api/JiraClient';
+import type { EventBus } from '../../../core/EventBus';
+import { addFrontmatterFields } from '../../../utils/frontmatter';
 
 const MAX_CACHE_SIZE = 100;
 

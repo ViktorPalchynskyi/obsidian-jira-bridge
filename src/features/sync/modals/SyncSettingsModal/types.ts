@@ -1,4 +1,4 @@
-import type { FolderMapping, JiraInstance, SyncFieldConfig, ProjectSyncConfig } from '../../types';
+import type { FolderMapping, JiraInstance, SyncFieldConfig, ProjectSyncConfig } from '../../../../types';
 
 export interface SyncSettingsModalOptions {
   mapping: FolderMapping;

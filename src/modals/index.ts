@@ -19,8 +19,8 @@ export { BulkStatusChangeProgressModal } from '../features/status-change/modals/
 export { BulkStatusChangeReportModal } from '../features/status-change/modals/BulkStatusChangeReportModal';
 export { AdvancedConfigModal } from './AdvancedConfigModal/AdvancedConfigModal';
 export type { AdvancedConfigModalOptions } from './AdvancedConfigModal/types';
-export { SyncSettingsModal } from './SyncSettingsModal/SyncSettingsModal';
-export type { SyncSettingsModalOptions, SyncSettingsModalResult } from './SyncSettingsModal/types';
+export { SyncSettingsModal } from '../features/sync/modals/SyncSettingsModal/SyncSettingsModal';
+export type { SyncSettingsModalOptions, SyncSettingsModalResult } from '../features/sync/modals/SyncSettingsModal/types';
 export { LinkTicketModal } from '../features/link-ticket/modals/LinkTicketModal/LinkTicketModal';
 export type { LinkTicketModalOptions, LinkTicketModalResult } from '../features/link-ticket/modals/LinkTicketModal/types';
 export { ProjectComparisonModal } from './ProjectComparisonModal';

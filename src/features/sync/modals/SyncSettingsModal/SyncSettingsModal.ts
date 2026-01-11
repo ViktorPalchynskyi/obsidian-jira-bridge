@@ -1,7 +1,7 @@
 import { App } from 'obsidian';
-import { BaseModal } from '../base/BaseModal';
+import { BaseModal } from '../../../../modals/base/BaseModal';
 import type { SyncSettingsModalOptions, SyncSettingsModalResult } from './types';
-import type { SyncFieldConfig } from '../../types';
+import type { SyncFieldConfig } from '../../../../types';
 
 interface ModalState {
   enableSync: boolean;

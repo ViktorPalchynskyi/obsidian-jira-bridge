@@ -29,7 +29,7 @@ import {
 } from '../utils';
 import { BulkCreateService } from '../features/ticket-creation';
 import { BulkStatusChangeService } from '../features/status-change';
-import { SyncService } from '../services/sync';
+import { SyncService } from '../features/sync/services';
 
 export class JiraBridgePlugin extends Plugin {
   private container!: ServiceContainer;

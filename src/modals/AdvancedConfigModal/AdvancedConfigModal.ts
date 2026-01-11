@@ -2,7 +2,7 @@ import { App } from 'obsidian';
 import { BaseModal } from '../base/BaseModal';
 import { FrontmatterMappingModal } from '../FrontmatterMappingModal/FrontmatterMappingModal';
 import { CustomFieldsModal } from '../CustomFieldsModal/CustomFieldsModal';
-import { SyncSettingsModal } from '../SyncSettingsModal/SyncSettingsModal';
+import { SyncSettingsModal } from '../../features/sync/modals/SyncSettingsModal/SyncSettingsModal';
 import type { AdvancedConfigModalOptions } from './types';
 
 export class AdvancedConfigModal extends BaseModal<null> {

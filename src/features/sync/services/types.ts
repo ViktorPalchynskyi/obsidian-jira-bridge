@@ -1,5 +1,5 @@
 import type { TFile } from 'obsidian';
-import type { SyncFieldConfig } from '../../types/settings.types';
+import type { SyncFieldConfig } from '../../../types/settings.types';
 
 export interface SyncOptions {
   force?: boolean;

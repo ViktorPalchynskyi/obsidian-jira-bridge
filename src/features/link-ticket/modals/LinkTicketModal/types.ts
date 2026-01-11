@@ -1,4 +1,4 @@
-import type { JiraInstance } from '../../types';
+import type { JiraInstance } from '../../../../types';
 
 export interface LinkTicketModalOptions {
   instances: JiraInstance[];

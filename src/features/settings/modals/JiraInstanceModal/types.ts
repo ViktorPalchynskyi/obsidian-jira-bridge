@@ -1,4 +1,4 @@
-import type { JiraInstance } from '../../types';
+import type { JiraInstance } from '../../../../types';
 
 export type ModalMode = 'add' | 'edit';
 

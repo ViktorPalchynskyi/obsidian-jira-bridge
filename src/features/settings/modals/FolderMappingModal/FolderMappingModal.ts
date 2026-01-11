@@ -1,8 +1,8 @@
 import { App } from 'obsidian';
-import { BaseModal } from '../base/BaseModal';
+import { BaseModal } from '../../../../modals/base/BaseModal';
 import { FolderSuggestModal } from '../FolderSuggestModal/FolderSuggestModal';
-import { JiraClient } from '../../api';
-import type { FolderMapping, JiraProject } from '../../types';
+import { JiraClient } from '../../../../api';
+import type { FolderMapping, JiraProject } from '../../../../types';
 import type { FolderMappingModalOptions, FormState } from './types';
 
 export class FolderMappingModal extends BaseModal<FolderMapping> {

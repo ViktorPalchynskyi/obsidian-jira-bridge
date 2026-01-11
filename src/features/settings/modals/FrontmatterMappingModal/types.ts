@@ -1,4 +1,4 @@
-import type { FolderMapping, JiraInstance, ProjectMappingConfig, CustomFieldConfig } from '../../types';
+import type { FolderMapping, JiraInstance, ProjectMappingConfig, CustomFieldConfig } from '../../../../types';
 
 export interface FrontmatterMappingModalOptions {
   mapping: FolderMapping;

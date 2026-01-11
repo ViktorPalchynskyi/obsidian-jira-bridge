@@ -1,5 +1,5 @@
-import type { FolderMapping, MappingType } from '../../types';
-import type { JiraInstance, JiraProject } from '../../types';
+import type { FolderMapping, MappingType } from '../../../../types';
+import type { JiraInstance, JiraProject } from '../../../../types';
 
 export interface FolderMappingModalOptions {
   mode: 'add' | 'edit';

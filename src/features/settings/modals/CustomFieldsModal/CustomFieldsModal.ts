@@ -1,7 +1,7 @@
 import { App } from 'obsidian';
-import { BaseModal } from '../base/BaseModal';
-import { JiraClient } from '../../api';
-import type { JiraIssueType, JiraFieldMeta, CustomFieldConfig } from '../../types';
+import { BaseModal } from '../../../../modals/base/BaseModal';
+import { JiraClient } from '../../../../api';
+import type { JiraIssueType, JiraFieldMeta, CustomFieldConfig } from '../../../../types';
 import type { CustomFieldsModalOptions, CustomFieldsModalResult } from './types';
 
 export class CustomFieldsModal extends BaseModal<CustomFieldsModalResult> {

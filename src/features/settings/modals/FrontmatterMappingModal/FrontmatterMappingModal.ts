@@ -1,8 +1,8 @@
 import { App } from 'obsidian';
-import { BaseModal } from '../base/BaseModal';
-import type { FrontmatterFieldMapping, BuiltInFieldType, ProjectMappingConfig } from '../../types';
+import { BaseModal } from '../../../../modals/base/BaseModal';
+import type { FrontmatterFieldMapping, BuiltInFieldType, ProjectMappingConfig } from '../../../../types';
 import type { FrontmatterMappingModalOptions, FrontmatterMappingModalResult } from './types';
-import { DEFAULT_CONTENT_PARSING } from '../../constants/defaults';
+import { DEFAULT_CONTENT_PARSING } from '../../../../constants/defaults';
 
 interface FieldOption {
   id: string;

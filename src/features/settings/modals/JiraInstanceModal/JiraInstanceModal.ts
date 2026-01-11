@@ -1,7 +1,7 @@
 import { App, setIcon } from 'obsidian';
-import { BaseModal } from '../base/BaseModal';
-import type { JiraInstance } from '../../types';
-import { validateField, validateForm, generateInstanceId, type JiraInstanceFormData } from '../../utils/validation';
+import { BaseModal } from '../../../../modals/base/BaseModal';
+import type { JiraInstance } from '../../../../types';
+import { validateField, validateForm, generateInstanceId, type JiraInstanceFormData } from '../../../../utils/validation';
 import type { JiraInstanceModalOptions, FormElements, ErrorElements } from './types';
 
 const FIELD_HINTS: Partial<Record<keyof JiraInstanceFormData, string>> = {

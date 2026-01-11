@@ -1,5 +1,5 @@
 import { App, Modal } from 'obsidian';
-import type { BulkStatusChangeProgress } from '../../services/bulkStatusChange';
+import type { BulkStatusChangeProgress } from '../../services/types';
 
 export class BulkStatusChangeProgressModal extends Modal {
   private progressBar: HTMLDivElement | null = null;

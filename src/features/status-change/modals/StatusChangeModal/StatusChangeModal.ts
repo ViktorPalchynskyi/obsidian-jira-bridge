@@ -1,9 +1,9 @@
 import { App, Notice } from 'obsidian';
-import { BaseModal } from '../base/BaseModal';
+import { BaseModal } from '../../../../modals/base/BaseModal';
 import type { StatusChangeResult, StatusChangeModalOptions } from './types';
-import type { JiraTransition, JiraStatus, JiraSprint, JiraBoard } from '../../types';
-import { JiraClient } from '../../api/JiraClient';
-import { debounce, mapJiraError, NOTICE_DURATION, type DebouncedFunction } from '../../utils';
+import type { JiraTransition, JiraStatus, JiraSprint, JiraBoard } from '../../../../types';
+import { JiraClient } from '../../../../api/JiraClient';
+import { debounce, mapJiraError, NOTICE_DURATION, type DebouncedFunction } from '../../../../utils';
 
 interface ModalState {
   issueKey: string;

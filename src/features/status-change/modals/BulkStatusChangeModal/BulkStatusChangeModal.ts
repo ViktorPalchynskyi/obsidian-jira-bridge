@@ -1,12 +1,12 @@
 import { App, TFile } from 'obsidian';
-import { BaseModal } from '../base/BaseModal';
+import { BaseModal } from '../../../../modals/base/BaseModal';
 import type { BulkStatusChangeModalOptions, BulkStatusChangeModalResult } from './types';
-import type { JiraTransition, JiraBoard, JiraSprint } from '../../types';
-import { JiraClient } from '../../api/JiraClient';
-import { MappingResolver } from '../../mapping';
-import { parseSummaryFromContent } from '../../utils';
-import { DEFAULT_CONTENT_PARSING } from '../../constants/defaults';
-import { isFolder, collectMarkdownFiles } from '../../services/utils';
+import type { JiraTransition, JiraBoard, JiraSprint } from '../../../../types';
+import { JiraClient } from '../../../../api/JiraClient';
+import { MappingResolver } from '../../../../mapping';
+import { parseSummaryFromContent } from '../../../../utils';
+import { DEFAULT_CONTENT_PARSING } from '../../../../constants/defaults';
+import { isFolder, collectMarkdownFiles } from '../../../../services/utils';
 
 interface ModalState {
   instanceId: string;

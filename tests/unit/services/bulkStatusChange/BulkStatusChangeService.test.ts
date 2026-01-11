@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { TFile, TFolder, App } from 'obsidian';
 import type { PluginSettings, JiraInstance } from '../../../../src/types';
-import type { BulkStatusChangeProgress } from '../../../../src/services/bulkStatusChange';
-import { BulkStatusChangeService } from '../../../../src/services/bulkStatusChange/BulkStatusChangeService';
+import type { BulkStatusChangeProgress } from '../../../../src/features/status-change';
+import { BulkStatusChangeService } from '../../../../src/features/status-change/services/BulkStatusChangeService';
 
 vi.mock('obsidian', () => ({
   requestUrl: vi.fn(),

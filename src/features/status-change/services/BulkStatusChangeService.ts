@@ -1,5 +1,5 @@
 import type { App, TFile } from 'obsidian';
-import type { PluginSettings } from '../../types';
+import type { PluginSettings } from '../../../types';
 import type {
   NoteToChangeStatus,
   BulkStatusChangeResult,
@@ -7,13 +7,13 @@ import type {
   BulkStatusChangeProgress,
   SkippedNote,
 } from './types';
-import type { BulkOperationTarget } from '../types';
-import { MappingResolver } from '../../mapping';
-import { JiraClient } from '../../api/JiraClient';
-import { parseSummaryFromContent } from '../../utils';
-import { addFrontmatterFields } from '../../utils/frontmatter';
-import { DEFAULT_CONTENT_PARSING } from '../../constants/defaults';
-import { collectMarkdownFiles } from '../utils';
+import type { BulkOperationTarget } from '../../../services/types';
+import { MappingResolver } from '../../../mapping';
+import { JiraClient } from '../../../api/JiraClient';
+import { parseSummaryFromContent } from '../../../utils';
+import { addFrontmatterFields } from '../../../utils/frontmatter';
+import { DEFAULT_CONTENT_PARSING } from '../../../constants/defaults';
+import { collectMarkdownFiles } from '../../../services/utils';
 
 export interface BulkStatusChangeOptions {
   transitionId?: string;

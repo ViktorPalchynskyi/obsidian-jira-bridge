@@ -1,5 +1,5 @@
 import { App, Modal } from 'obsidian';
-import type { BulkStatusChangeResult } from '../../services/bulkStatusChange';
+import type { BulkStatusChangeResult } from '../../services/types';
 
 export class BulkStatusChangeReportModal extends Modal {
   constructor(

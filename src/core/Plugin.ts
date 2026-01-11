@@ -28,7 +28,7 @@ import {
   NOTICE_DURATION,
 } from '../utils';
 import { BulkCreateService } from '../features/ticket-creation';
-import { BulkStatusChangeService } from '../services/bulkStatusChange';
+import { BulkStatusChangeService } from '../features/status-change';
 import { SyncService } from '../services/sync';
 
 export class JiraBridgePlugin extends Plugin {

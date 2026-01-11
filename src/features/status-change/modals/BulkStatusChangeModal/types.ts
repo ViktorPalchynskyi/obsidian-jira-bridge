@@ -1,5 +1,5 @@
-import type { JiraInstance, PluginSettings } from '../../types';
-import type { BulkOperationTarget } from '../../services/types';
+import type { JiraInstance, PluginSettings } from '../../../../types';
+import type { BulkOperationTarget } from '../../../../services/types';
 
 export interface BulkStatusChangeModalOptions {
   instances: JiraInstance[];

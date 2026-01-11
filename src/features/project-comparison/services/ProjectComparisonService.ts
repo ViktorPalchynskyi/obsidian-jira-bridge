@@ -1,5 +1,5 @@
-import type { JiraClient } from '../../api/JiraClient';
-import type { ConfigurationDiff, DiffCategory, FieldConfig, IssueTypeConfig, WorkflowConfig, BoardDetailedConfig } from '../../types';
+import type { JiraClient } from '../../../api/JiraClient';
+import type { ConfigurationDiff, DiffCategory, FieldConfig, IssueTypeConfig, WorkflowConfig, BoardDetailedConfig } from '../../../types';
 
 interface ProjectConfig {
   key: string;

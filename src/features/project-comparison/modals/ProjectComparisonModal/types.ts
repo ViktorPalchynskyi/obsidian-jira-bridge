@@ -1,4 +1,4 @@
-import type { ConfigurationDiff } from '../../types';
+import type { ConfigurationDiff } from '../../../../types';
 
 export type ComparisonStep = 1 | 2 | 3 | 4;
 
@@ -32,5 +32,5 @@ export interface ProjectInfo {
 }
 
 export interface ProjectComparisonModalOptions {
-  instances: import('../../types').JiraInstance[];
+  instances: import('../../../../types').JiraInstance[];
 }

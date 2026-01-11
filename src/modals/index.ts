@@ -23,5 +23,5 @@ export { SyncSettingsModal } from '../features/sync/modals/SyncSettingsModal/Syn
 export type { SyncSettingsModalOptions, SyncSettingsModalResult } from '../features/sync/modals/SyncSettingsModal/types';
 export { LinkTicketModal } from '../features/link-ticket/modals/LinkTicketModal/LinkTicketModal';
 export type { LinkTicketModalOptions, LinkTicketModalResult } from '../features/link-ticket/modals/LinkTicketModal/types';
-export { ProjectComparisonModal } from './ProjectComparisonModal';
-export type { ProjectComparisonModalOptions } from './ProjectComparisonModal';
+export { ProjectComparisonModal } from '../features/project-comparison/modals/ProjectComparisonModal/ProjectComparisonModal';
+export type { ProjectComparisonModalOptions } from '../features/project-comparison/modals/ProjectComparisonModal/types';

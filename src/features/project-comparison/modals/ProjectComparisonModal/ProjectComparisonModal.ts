@@ -1,9 +1,9 @@
 import { App, Notice, DropdownComponent, setIcon } from 'obsidian';
-import { BaseModal } from '../base/BaseModal';
-import type { JiraProject, ConfigurationDiff } from '../../types';
+import { BaseModal } from '../../../../modals/base/BaseModal';
+import type { JiraProject, ConfigurationDiff } from '../../../../types';
 import type { ComparisonStep, ComparisonState, ProjectSelection, ProjectComparisonModalOptions } from './types';
-import { JiraClient } from '../../api/JiraClient';
-import { ProjectComparisonService, type ComparisonProjectInfo } from '../../services/projectComparison';
+import { JiraClient } from '../../../../api/JiraClient';
+import { ProjectComparisonService, type ComparisonProjectInfo } from '../../services';
 
 export class ProjectComparisonModal extends BaseModal<void> {
   private options: ProjectComparisonModalOptions;

@@ -1,9 +1,9 @@
 import { App, Notice } from 'obsidian';
-import { BaseModal } from '../base/BaseModal';
-import { JiraClient } from '../../api';
-import type { JiraProject, JiraIssueType, JiraPriority, JiraFieldMeta } from '../../types';
+import { BaseModal } from '../../../../modals/base/BaseModal';
+import { JiraClient } from '../../../../api';
+import type { JiraProject, JiraIssueType, JiraPriority, JiraFieldMeta } from '../../../../types';
 import type { CreateTicketModalOptions, CreateTicketResult } from './types';
-import { mapJiraError, NOTICE_DURATION } from '../../utils';
+import { mapJiraError, NOTICE_DURATION } from '../../../../utils';
 
 interface FormState {
   summary: string;

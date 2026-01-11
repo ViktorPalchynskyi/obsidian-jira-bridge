@@ -1,6 +1,6 @@
 import { Plugin, MarkdownView, TFile, TFolder, Menu, Notice } from 'obsidian';
 import type { PluginSettings, ServiceToken, ProjectMappingConfig, FrontmatterFieldMapping } from '../types';
-import type { FrontmatterValues } from '../modals/CreateTicketModal/types';
+import type { FrontmatterValues } from '../features/ticket-creation';
 import { ServiceContainer } from './ServiceContainer';
 import { EventBus } from './EventBus';
 import { JiraBridgeSettingsTab } from '../settings';
@@ -27,7 +27,7 @@ import {
   mapJiraError,
   NOTICE_DURATION,
 } from '../utils';
-import { BulkCreateService } from '../services/bulkCreate';
+import { BulkCreateService } from '../features/ticket-creation';
 import { BulkStatusChangeService } from '../services/bulkStatusChange';
 import { SyncService } from '../services/sync';
 

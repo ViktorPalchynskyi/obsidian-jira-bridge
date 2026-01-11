@@ -1,5 +1,5 @@
-import type { JiraInstance, JiraIssueType, JiraPriority, JiraFieldMeta } from '../../types';
-import { JiraClient } from '../../api/JiraClient';
+import type { JiraInstance, JiraIssueType, JiraPriority, JiraFieldMeta } from '../../../types';
+import { JiraClient } from '../../../api/JiraClient';
 
 export class BulkCreateCache {
   private issueTypes = new Map<string, JiraIssueType[]>();

@@ -1,13 +1,13 @@
 import type { App, TFile } from 'obsidian';
-import type { PluginSettings, ProjectMappingConfig } from '../../types';
-import type { FrontmatterValues } from '../../modals/CreateTicketModal/types';
+import type { PluginSettings, ProjectMappingConfig } from '../../../types';
+import type { FrontmatterValues } from '../modals/CreateTicketModal/types';
 import type { NoteToProcess, SkippedNote, BulkCreateResult, ProgressCallback, BulkCreateProgress } from './types';
-import type { BulkOperationTarget } from '../types';
-import { MappingResolver } from '../../mapping';
+import type { BulkOperationTarget } from '../../../services/types';
+import { MappingResolver } from '../../../mapping';
 import { BulkCreateCache } from './BulkCreateCache';
-import { parseSummaryFromContent, parseDescriptionFromContent } from '../../utils';
-import { DEFAULT_CONTENT_PARSING } from '../../constants/defaults';
-import { collectMarkdownFiles } from '../utils';
+import { parseSummaryFromContent, parseDescriptionFromContent } from '../../../utils';
+import { DEFAULT_CONTENT_PARSING } from '../../../constants/defaults';
+import { collectMarkdownFiles } from '../../../services/utils';
 
 export class BulkCreateService {
   private mappingResolver: MappingResolver;

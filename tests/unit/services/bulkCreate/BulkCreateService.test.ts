@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { TFile, TFolder, App } from 'obsidian';
 import type { PluginSettings, JiraInstance } from '../../../../src/types';
-import type { BulkCreateProgress } from '../../../../src/services/bulkCreate';
+import type { BulkCreateProgress } from '../../../../src/features/ticket-creation';
 
 vi.mock('obsidian', () => ({
   requestUrl: vi.fn(),
 }));
 
-vi.mock('../../../../src/services/bulkCreate/BulkCreateCache', () => ({
+vi.mock('../../../../src/features/ticket-creation/services/BulkCreateCache', () => ({
   BulkCreateCache: vi.fn().mockImplementation(() => ({
     getClient: vi.fn().mockReturnValue({
       getIssueUrl: vi.fn().mockReturnValue('https://jira.test/browse/TEST-1'),
@@ -23,7 +23,7 @@ vi.mock('../../../../src/services/bulkCreate/BulkCreateCache', () => ({
   })),
 }));
 
-import { BulkCreateService } from '../../../../src/services/bulkCreate/BulkCreateService';
+import { BulkCreateService } from '../../../../src/features/ticket-creation/services/BulkCreateService';
 
 const createMockInstance = (): JiraInstance => ({
   id: 'instance-1',

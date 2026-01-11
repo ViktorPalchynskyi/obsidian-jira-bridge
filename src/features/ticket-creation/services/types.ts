@@ -1,6 +1,6 @@
 import type { TFile } from 'obsidian';
-import type { JiraInstance, JiraIssueType, JiraPriority, JiraFieldMeta } from '../../types';
-import type { FrontmatterValues } from '../../modals/CreateTicketModal/types';
+import type { JiraInstance, JiraIssueType, JiraPriority, JiraFieldMeta } from '../../../types';
+import type { FrontmatterValues } from '../modals/CreateTicketModal/types';
 
 export interface NoteToProcess {
   file: TFile;

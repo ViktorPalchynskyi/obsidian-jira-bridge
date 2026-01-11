@@ -1,5 +1,5 @@
 import { App, Modal } from 'obsidian';
-import type { BulkCreateProgress } from '../../services/bulkCreate';
+import type { BulkCreateProgress } from '../../services/types';
 
 export class BulkCreateProgressModal extends Modal {
   private progressBar: HTMLDivElement | null = null;

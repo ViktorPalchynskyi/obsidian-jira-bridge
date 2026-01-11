@@ -1,4 +1,4 @@
-import type { JiraInstance, ResolvedContext, CustomFieldConfig, ProjectMappingConfig } from '../../types';
+import type { JiraInstance, ResolvedContext, CustomFieldConfig, ProjectMappingConfig } from '../../../../types';
 
 export interface FrontmatterValues {
   issueType?: string;

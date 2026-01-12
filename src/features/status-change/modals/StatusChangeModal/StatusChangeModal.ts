@@ -1,5 +1,5 @@
 import { App, Notice } from 'obsidian';
-import { BaseModal } from '../../../../modals/base/BaseModal';
+import { BaseModal } from '../../../../ui/modals/BaseModal/BaseModal';
 import type { StatusChangeResult, StatusChangeModalOptions } from './types';
 import type { JiraTransition, JiraStatus, JiraSprint, JiraBoard } from '../../../../types';
 import { JiraClient } from '../../../../api/JiraClient';

@@ -1,5 +1,5 @@
 import { App } from 'obsidian';
-import { BaseModal } from '../../../../modals/base/BaseModal';
+import { BaseModal } from '../../../../ui/modals/BaseModal/BaseModal';
 import { FolderSuggestModal } from '../FolderSuggestModal/FolderSuggestModal';
 import { JiraClient } from '../../../../api';
 import type { FolderMapping, JiraProject } from '../../../../types';

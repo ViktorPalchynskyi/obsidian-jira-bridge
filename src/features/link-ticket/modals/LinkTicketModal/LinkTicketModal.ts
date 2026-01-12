@@ -1,5 +1,5 @@
 import { App, debounce } from 'obsidian';
-import { BaseModal } from '../../../../modals/base/BaseModal';
+import { BaseModal } from '../../../../ui/modals/BaseModal/BaseModal';
 import type { LinkTicketModalOptions, LinkTicketModalResult, SearchIssueResult } from './types';
 import { JiraClient } from '../../../../api/JiraClient';
 import { mapJiraError } from '../../../../utils';

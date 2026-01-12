@@ -1,4 +1,4 @@
-@use '../modals/base/styles.scss' as base;
+@use '../ui/modals/BaseModal/styles.scss' as base;
 @use '../features/settings/modals/JiraInstanceModal/styles.scss' as instanceModal;
 @use '../features/ticket-creation/modals/CreateTicketModal/styles.scss' as createTicket;
 @use '../features/status-change/modals/StatusChangeModal/styles.scss' as statusChange;

@@ -1,4 +1,4 @@
-export { BaseModal } from './base/BaseModal';
+export { BaseModal } from '../ui/modals/BaseModal/BaseModal';
 export { JiraInstanceModal } from '../features/settings/modals/JiraInstanceModal/JiraInstanceModal';
 export type { JiraInstanceModalOptions } from '../features/settings/modals/JiraInstanceModal/types';
 export { CreateTicketModal } from '../features/ticket-creation/modals/CreateTicketModal';

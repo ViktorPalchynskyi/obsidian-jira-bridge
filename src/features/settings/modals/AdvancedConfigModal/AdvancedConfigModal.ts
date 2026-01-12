@@ -1,5 +1,5 @@
 import { App } from 'obsidian';
-import { BaseModal } from '../../../../modals/base/BaseModal';
+import { BaseModal } from '../../../../ui/modals/BaseModal/BaseModal';
 import { FrontmatterMappingModal } from '../FrontmatterMappingModal/FrontmatterMappingModal';
 import { CustomFieldsModal } from '../CustomFieldsModal/CustomFieldsModal';
 import { SyncSettingsModal } from '../../../sync/modals/SyncSettingsModal/SyncSettingsModal';

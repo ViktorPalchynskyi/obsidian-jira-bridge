@@ -1,7 +1,7 @@
 import { TFile, App, Plugin } from 'obsidian';
-import type { MappingResolver } from '../mapping/MappingResolver';
-import type { UISettings } from '../types';
-import { readFrontmatterField } from '../utils/frontmatter';
+import type { MappingResolver } from '../../mapping/MappingResolver';
+import type { UISettings } from '../../types';
+import { readFrontmatterField } from '../../utils/frontmatter';
 
 export class StatusBarManager {
   private app: App;

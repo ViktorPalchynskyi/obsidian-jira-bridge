@@ -1,5 +1,5 @@
 import { App } from 'obsidian';
-import { BaseModal } from '../../../../modals/base/BaseModal';
+import { BaseModal } from '../../../../ui/modals/BaseModal/BaseModal';
 import type { SyncSettingsModalOptions, SyncSettingsModalResult } from './types';
 import type { SyncFieldConfig } from '../../../../types';
 

@@ -1,5 +1,5 @@
 import { App, TFile } from 'obsidian';
-import { BaseModal } from '../../../../modals/base/BaseModal';
+import { BaseModal } from '../../../../ui/modals/BaseModal/BaseModal';
 import type { BulkStatusChangeModalOptions, BulkStatusChangeModalResult } from './types';
 import type { JiraTransition, JiraBoard, JiraSprint } from '../../../../types';
 import { JiraClient } from '../../../../api/JiraClient';

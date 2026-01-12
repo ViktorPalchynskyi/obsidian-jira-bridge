@@ -1,5 +1,5 @@
 import { App, Notice } from 'obsidian';
-import { BaseModal } from '../../../../modals/base/BaseModal';
+import { BaseModal } from '../../../../ui/modals/BaseModal/BaseModal';
 import { JiraClient } from '../../../../api';
 import type { JiraProject, JiraIssueType, JiraPriority, JiraFieldMeta } from '../../../../types';
 import type { CreateTicketModalOptions, CreateTicketResult } from './types';

@@ -1,5 +1,5 @@
 import { App, Notice, DropdownComponent, setIcon } from 'obsidian';
-import { BaseModal } from '../../../../modals/base/BaseModal';
+import { BaseModal } from '../../../../ui/modals/BaseModal/BaseModal';
 import type { JiraProject, ConfigurationDiff } from '../../../../types';
 import type { ComparisonStep, ComparisonState, ProjectSelection, ProjectComparisonModalOptions } from './types';
 import { JiraClient } from '../../../../api/JiraClient';

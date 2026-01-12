@@ -1,5 +1,5 @@
 import { App } from 'obsidian';
-import { BaseModal } from '../../../../modals/base/BaseModal';
+import { BaseModal } from '../../../../ui/modals/BaseModal/BaseModal';
 import type { FrontmatterFieldMapping, BuiltInFieldType, ProjectMappingConfig } from '../../../../types';
 import type { FrontmatterMappingModalOptions, FrontmatterMappingModalResult } from './types';
 import { DEFAULT_CONTENT_PARSING } from '../../../../constants/defaults';

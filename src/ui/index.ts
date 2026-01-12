@@ -1,1 +1,1 @@
-export { StatusBarManager } from './StatusBarManager';
+export { StatusBarManager } from './statusbar/StatusBarManager';

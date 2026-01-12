@@ -1,5 +1,5 @@
 import { App, setIcon } from 'obsidian';
-import { BaseModal } from '../../../../modals/base/BaseModal';
+import { BaseModal } from '../../../../ui/modals/BaseModal/BaseModal';
 import type { JiraInstance } from '../../../../types';
 import { validateField, validateForm, generateInstanceId, type JiraInstanceFormData } from '../../../../utils/validation';
 import type { JiraInstanceModalOptions, FormElements, ErrorElements } from './types';

@@ -210,16 +210,14 @@ export class SyncService {
 
     const intervalMs = (this.settings.sync?.syncInterval ?? 1) * 60 * 1000;
 
-    // eslint-disable-next-line no-undef
-    this.intervalId = setInterval(async () => {
+    this.intervalId = window.setInterval(async () => {
       await this.syncAllOpenNotes({ silent: true, force: true });
-    }, intervalMs) as unknown as number;
+    }, intervalMs);
   }
 
   stopAutoSync(): void {
     if (this.intervalId !== null) {
-      // eslint-disable-next-line no-undef
-      clearInterval(this.intervalId);
+      window.clearInterval(this.intervalId);
       this.intervalId = null;
     }
   }

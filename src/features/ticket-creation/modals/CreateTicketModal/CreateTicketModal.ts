@@ -115,14 +115,15 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     const fieldGroup = container.createEl('div', { cls: 'field-group' });
     fieldGroup.createEl('label', { text: 'Summary *' });
 
-    this.summaryInput = fieldGroup.createEl('input', {
+    const summaryInput = fieldGroup.createEl('input', {
       type: 'text',
       cls: 'field-input',
       attr: { placeholder: 'Issue summary...', tabindex: '1' },
     });
-    this.summaryInput.value = this.state.summary;
-    this.summaryInput.addEventListener('input', () => {
-      this.state.summary = this.summaryInput!.value;
+    this.summaryInput = summaryInput;
+    summaryInput.value = this.state.summary;
+    summaryInput.addEventListener('input', () => {
+      this.state.summary = summaryInput.value;
       this.updateSubmitButtonState();
     });
   }
@@ -131,18 +132,19 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     const fieldGroup = container.createEl('div', { cls: 'field-group' });
     fieldGroup.createEl('label', { text: 'Project *' });
 
-    this.projectSelect = fieldGroup.createEl('select', {
+    const projectSelect = fieldGroup.createEl('select', {
       cls: 'field-select',
       attr: { tabindex: '2' },
     });
+    this.projectSelect = projectSelect;
 
-    this.projectSelect.createEl('option', {
+    projectSelect.createEl('option', {
       text: 'Loading projects...',
       attr: { value: '', disabled: 'true', selected: 'true' },
     });
 
-    this.projectSelect.addEventListener('change', () => {
-      this.state.projectKey = this.projectSelect!.value;
+    projectSelect.addEventListener('change', () => {
+      this.state.projectKey = projectSelect.value;
       this.loadIssueTypes();
       this.updateSubmitButtonState();
     });
@@ -152,18 +154,19 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     const fieldGroup = container.createEl('div', { cls: 'field-group' });
     fieldGroup.createEl('label', { text: 'Issue Type *' });
 
-    this.issueTypeSelect = fieldGroup.createEl('select', {
+    const issueTypeSelect = fieldGroup.createEl('select', {
       cls: 'field-select',
       attr: { tabindex: '3' },
     });
+    this.issueTypeSelect = issueTypeSelect;
 
-    this.issueTypeSelect.createEl('option', {
+    issueTypeSelect.createEl('option', {
       text: 'Select project first...',
       attr: { value: '', disabled: 'true', selected: 'true' },
     });
 
-    this.issueTypeSelect.addEventListener('change', () => {
-      this.state.issueTypeId = this.issueTypeSelect!.value;
+    issueTypeSelect.addEventListener('change', () => {
+      this.state.issueTypeId = issueTypeSelect.value;
       this.state.customFieldValues = {};
       this.updateSubmitButtonState();
       if (this.state.issueTypeId && this.hasCustomFields()) {
@@ -176,18 +179,19 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     const fieldGroup = container.createEl('div', { cls: 'field-group' });
     fieldGroup.createEl('label', { text: 'Priority' });
 
-    this.prioritySelect = fieldGroup.createEl('select', {
+    const prioritySelect = fieldGroup.createEl('select', {
       cls: 'field-select',
       attr: { tabindex: '4' },
     });
+    this.prioritySelect = prioritySelect;
 
-    this.prioritySelect.createEl('option', {
+    prioritySelect.createEl('option', {
       text: 'Loading priorities...',
       attr: { value: '', disabled: 'true', selected: 'true' },
     });
 
-    this.prioritySelect.addEventListener('change', () => {
-      this.state.priorityId = this.prioritySelect!.value;
+    prioritySelect.addEventListener('change', () => {
+      this.state.priorityId = prioritySelect.value;
     });
   }
 
@@ -195,14 +199,15 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     const fieldGroup = container.createEl('div', { cls: 'field-group' });
     fieldGroup.createEl('label', { text: 'Description' });
 
-    this.descriptionInput = fieldGroup.createEl('textarea', {
+    const descriptionInput = fieldGroup.createEl('textarea', {
       cls: 'field-textarea',
       attr: { placeholder: 'Issue description...', rows: '4', tabindex: '5' },
     });
-    this.descriptionInput.value = this.state.description;
+    this.descriptionInput = descriptionInput;
+    descriptionInput.value = this.state.description;
 
-    this.descriptionInput.addEventListener('input', () => {
-      this.state.description = this.descriptionInput!.value;
+    descriptionInput.addEventListener('input', () => {
+      this.state.description = descriptionInput.value;
     });
   }
 
@@ -514,7 +519,8 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
 
     try {
       const allFields = await this.client.getFieldsForIssueType(this.state.projectKey, this.state.issueTypeId);
-      const configuredFieldIds = this.options.customFields!.map(cf => cf.fieldId);
+      const customFields = this.options.customFields ?? [];
+      const configuredFieldIds = customFields.map(cf => cf.fieldId);
       this.state.customFieldsMeta = allFields.filter(f => configuredFieldIds.includes(f.fieldId));
       this.applyFrontmatterCustomFields();
       this.renderCustomFields();
@@ -608,10 +614,11 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     const select = fieldGroup.createEl('select', { cls: 'field-select' });
     select.createEl('option', { text: `Select ${field.name}...`, attr: { value: '' } });
 
-    const prefilledValue = this.state.customFieldValues[field.fieldId] as { id?: string } | undefined;
-    const prefilledId = prefilledValue?.id;
+    const rawValue = this.state.customFieldValues[field.fieldId];
+    const prefilledId = this.extractId(rawValue);
+    const allowedValues = field.allowedValues ?? [];
 
-    for (const option of field.allowedValues!) {
+    for (const option of allowedValues) {
       const opt = select.createEl('option', {
         text: option.name || option.value || option.id,
         attr: { value: option.id },
@@ -631,14 +638,16 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
   }
 
   private async createUserField(fieldGroup: HTMLElement, field: JiraFieldMeta): Promise<void> {
+    if (!this.client) return;
+
     const select = fieldGroup.createEl('select', { cls: 'field-select' });
     select.createEl('option', { text: 'Loading users...', attr: { value: '', disabled: 'true' } });
 
-    const prefilledValue = this.state.customFieldValues[field.fieldId] as { displayName?: string; accountId?: string } | undefined;
-    const prefilledName = prefilledValue?.displayName?.toLowerCase();
+    const rawValue = this.state.customFieldValues[field.fieldId];
+    const prefilledName = this.extractDisplayName(rawValue)?.toLowerCase();
 
     try {
-      const users = await this.client!.getAssignableUsers(this.state.projectKey);
+      const users = await this.client.getAssignableUsers(this.state.projectKey);
       select.innerHTML = '';
       select.createEl('option', { text: `Select ${field.name}...`, attr: { value: '' } });
 
@@ -674,6 +683,8 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
   }
 
   private async createParentField(fieldGroup: HTMLElement, field: JiraFieldMeta, currentIssueTypeId: string): Promise<void> {
+    if (!this.client) return;
+
     const select = fieldGroup.createEl('select', { cls: 'field-select' });
     select.createEl('option', { text: 'Loading issues...', attr: { value: '', disabled: 'true' } });
 
@@ -692,11 +703,11 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     }
 
     try {
-      let allIssues = await this.client!.getParentableIssues(this.state.projectKey);
+      let allIssues = await this.client.getParentableIssues(this.state.projectKey);
 
       const parentSummary = this.options.frontmatterValues?.parentSummary;
       if (parentSummary) {
-        const searchResults = await this.client!.searchIssuesBySummary(this.state.projectKey, parentSummary, 5);
+        const searchResults = await this.client.searchIssuesBySummary(this.state.projectKey, parentSummary, 5);
         const newIssues = searchResults.filter(sr => !allIssues.some(ai => ai.key === sr.key));
         allIssues = [...newIssues, ...allIssues];
       }
@@ -741,6 +752,8 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
   }
 
   private async createLabelsField(fieldGroup: HTMLElement, field: JiraFieldMeta): Promise<void> {
+    if (!this.client) return;
+
     const selectedLabels: string[] = this.options.frontmatterValues?.labels ? [...this.options.frontmatterValues.labels] : [];
     let allLabels: string[] = [];
 
@@ -802,7 +815,7 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
     };
 
     try {
-      allLabels = await this.client!.getLabels();
+      allLabels = await this.client.getLabels();
       updateSelect();
       if (selectedLabels.length > 0) {
         updateChips();
@@ -864,5 +877,21 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
         delete this.state.customFieldValues[field.fieldId];
       }
     });
+  }
+
+  private extractId(value: unknown): string | undefined {
+    if (typeof value === 'object' && value !== null && 'id' in value) {
+      const id = (value as { id: unknown }).id;
+      return typeof id === 'string' ? id : undefined;
+    }
+    return undefined;
+  }
+
+  private extractDisplayName(value: unknown): string | undefined {
+    if (typeof value === 'object' && value !== null && 'displayName' in value) {
+      const name = (value as { displayName: unknown }).displayName;
+      return typeof name === 'string' ? name : undefined;
+    }
+    return undefined;
   }
 }

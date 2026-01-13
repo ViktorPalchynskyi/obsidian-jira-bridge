@@ -21,8 +21,9 @@ export class BulkCreateCache {
 
   async getIssueTypes(instanceId: string, projectKey: string): Promise<JiraIssueType[]> {
     const cacheKey = `${instanceId}:${projectKey}`;
-    if (this.issueTypes.has(cacheKey)) {
-      return this.issueTypes.get(cacheKey)!;
+    const cached = this.issueTypes.get(cacheKey);
+    if (cached) {
+      return cached;
     }
 
     const client = this.clients.get(instanceId);
@@ -34,8 +35,9 @@ export class BulkCreateCache {
   }
 
   async getPriorities(instanceId: string): Promise<JiraPriority[]> {
-    if (this.priorities.has(instanceId)) {
-      return this.priorities.get(instanceId)!;
+    const cached = this.priorities.get(instanceId);
+    if (cached) {
+      return cached;
     }
 
     const client = this.clients.get(instanceId);
@@ -48,8 +50,9 @@ export class BulkCreateCache {
 
   async getFieldsMeta(instanceId: string, projectKey: string, issueTypeId: string): Promise<JiraFieldMeta[]> {
     const cacheKey = `${instanceId}:${projectKey}:${issueTypeId}`;
-    if (this.fieldsMeta.has(cacheKey)) {
-      return this.fieldsMeta.get(cacheKey)!;
+    const cached = this.fieldsMeta.get(cacheKey);
+    if (cached) {
+      return cached;
     }
 
     const client = this.clients.get(instanceId);
@@ -72,7 +75,8 @@ export class BulkCreateCache {
     const client = this.clients.get(instanceId);
     if (!client) return new Map();
 
-    const uncheckedSummaries = summaries.filter(s => !projectSummaries!.has(s.toLowerCase()));
+    const cache = projectSummaries;
+    const uncheckedSummaries = summaries.filter(s => !cache.has(s.toLowerCase()));
 
     if (uncheckedSummaries.length > 0) {
       const duplicates = await this.batchCheckDuplicates(client, projectKey, uncheckedSummaries);
@@ -123,8 +127,9 @@ export class BulkCreateCache {
 
   async getAssignableUsers(instanceId: string, projectKey: string): Promise<{ accountId: string; displayName: string }[]> {
     const cacheKey = `${instanceId}:${projectKey}`;
-    if (this.assignableUsers.has(cacheKey)) {
-      return this.assignableUsers.get(cacheKey)!;
+    const cached = this.assignableUsers.get(cacheKey);
+    if (cached) {
+      return cached;
     }
 
     const client = this.clients.get(instanceId);

@@ -352,7 +352,8 @@ export class JiraBridgePlugin extends Plugin {
     );
 
     this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-      const target = evt.target as HTMLElement;
+      const target = evt.target;
+      if (!(target instanceof HTMLElement)) return;
 
       if (!evt.altKey && !evt.shiftKey) {
         if (this.selectedFiles.size > 0 && !target.closest('.jira-bridge-selection-counter')) {
@@ -880,16 +881,14 @@ export class JiraBridgePlugin extends Plugin {
   }
 
   private updateSelectionCounter(): void {
-    let counter = document.querySelector('.jira-bridge-selection-counter') as HTMLElement;
+    const existingCounter = document.querySelector('.jira-bridge-selection-counter');
 
     if (this.selectedFiles.size === 0) {
-      counter?.remove();
+      existingCounter?.remove();
       return;
     }
 
-    if (!counter) {
-      counter = document.body.createDiv('jira-bridge-selection-counter');
-    }
+    const counter = existingCounter instanceof HTMLElement ? existingCounter : document.body.createDiv('jira-bridge-selection-counter');
 
     counter.empty();
 

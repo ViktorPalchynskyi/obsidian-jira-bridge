@@ -14,7 +14,8 @@
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky"
   },
   "keywords": [
     "obsidian",
@@ -36,6 +37,8 @@
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "obsidian": "^1.7.2",
     "prettier": "^3.4.0",
     "sass": "^1.80.0",
@@ -45,5 +48,11 @@
   },
   "dependencies": {
     "zod": "^4.3.5"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   }
 }

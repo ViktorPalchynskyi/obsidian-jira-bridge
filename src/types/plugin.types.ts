@@ -1,18 +1,27 @@
 import type { App, Editor, Plugin, TFile } from 'obsidian';
 import type { PluginSettings } from './settings.types';
+import type { SyncResult } from './sync.types';
 
 export type ServiceToken<T> = {
   name: string;
   _type?: T;
 };
 
-export type EventHandler<T = unknown> = (payload: T) => void | Promise<void>;
+export interface EventMap {
+  'settings:changed': PluginSettings;
+  'file:opened': TFile;
+  'sync:complete': SyncResult;
+}
+
+export type EventName = keyof EventMap;
+
+export type EventHandler<K extends EventName> = (payload: EventMap[K]) => void | Promise<void>;
 
 export type EventBus = {
-  on<T>(event: string, handler: EventHandler<T>): () => void;
-  off<T>(event: string, handler: EventHandler<T>): void;
-  emit<T>(event: string, payload: T): Promise<void>;
-  once<T>(event: string, handler: EventHandler<T>): void;
+  on<K extends EventName>(event: K, handler: EventHandler<K>): () => void;
+  off<K extends EventName>(event: K, handler: EventHandler<K>): void;
+  emit<K extends EventName>(event: K, payload: EventMap[K]): Promise<void>;
+  once<K extends EventName>(event: K, handler: EventHandler<K>): void;
   clear(): void;
 };
 

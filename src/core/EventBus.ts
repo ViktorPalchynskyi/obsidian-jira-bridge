@@ -1,32 +1,43 @@
-import type { EventHandler, EventBus as EventBusType } from '../types';
+import type { EventHandler, EventBus as EventBusType, EventName, EventMap } from '../types';
+
+type HandlersStore = {
+  [K in EventName]?: Set<EventHandler<K>>;
+};
 
 export class EventBus implements EventBusType {
-  private handlers = new Map<string, Set<EventHandler>>();
+  private handlers: HandlersStore = {};
 
-  on<T>(event: string, handler: EventHandler<T>): () => void {
-    if (!this.handlers.has(event)) {
-      this.handlers.set(event, new Set());
+  private getOrCreateHandlers<K extends EventName>(event: K): Set<EventHandler<K>> {
+    const existing = this.handlers[event];
+    if (existing) {
+      return existing;
     }
-    this.handlers.get(event)!.add(handler as EventHandler);
+    const newSet = new Set<EventHandler<K>>();
+    (this.handlers as Record<K, Set<EventHandler<K>>>)[event] = newSet;
+    return newSet;
+  }
 
+  on<K extends EventName>(event: K, handler: EventHandler<K>): () => void {
+    const eventHandlers = this.getOrCreateHandlers(event);
+    eventHandlers.add(handler);
     return () => this.off(event, handler);
   }
 
-  off<T>(event: string, handler: EventHandler<T>): void {
-    this.handlers.get(event)?.delete(handler as EventHandler);
+  off<K extends EventName>(event: K, handler: EventHandler<K>): void {
+    this.handlers[event]?.delete(handler);
   }
 
-  async emit<T>(event: string, payload: T): Promise<void> {
-    const handlers = this.handlers.get(event);
-    if (!handlers) return;
+  async emit<K extends EventName>(event: K, payload: EventMap[K]): Promise<void> {
+    const eventHandlers = this.handlers[event];
+    if (!eventHandlers) return;
 
-    for (const handler of handlers) {
+    for (const handler of eventHandlers) {
       await handler(payload);
     }
   }
 
-  once<T>(event: string, handler: EventHandler<T>): void {
-    const wrapper: EventHandler<T> = async payload => {
+  once<K extends EventName>(event: K, handler: EventHandler<K>): void {
+    const wrapper: EventHandler<K> = async payload => {
       this.off(event, wrapper);
       await handler(payload);
     };
@@ -34,6 +45,6 @@ export class EventBus implements EventBusType {
   }
 
   clear(): void {
-    this.handlers.clear();
+    this.handlers = {};
   }
 }

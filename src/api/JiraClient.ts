@@ -1,4 +1,5 @@
 import { requestUrl, RequestUrlResponse } from 'obsidian';
+import { z } from 'zod';
 import type {
   JiraInstance,
   JiraProject,
@@ -6,7 +7,6 @@ import type {
   JiraPriority,
   CreateIssueResponse,
   JiraFieldMeta,
-  JiraStatus,
   JiraTransition,
   JiraBoard,
   JiraSprint,
@@ -16,6 +16,16 @@ import type {
 import type { TestConnectionResult, JiraUser } from './types';
 import { markdownToAdf } from '../utils/markdownToAdf';
 import { mapJiraError } from '../utils/errorMessages';
+import {
+  jiraProjectSchema,
+  jiraIssueTypeResponseSchema,
+  jiraPrioritySchema,
+  jiraUserSchema,
+  jiraTransitionsResponseSchema,
+  jiraBoardSchema,
+  jiraSprintSchema,
+  jiraPaginatedResponseSchema,
+} from './schemas';
 
 export class JiraClient {
   constructor(private instance: JiraInstance) {}
@@ -79,12 +89,13 @@ export class JiraClient {
       throw new Error(`Failed to fetch projects: ${response.status}`);
     }
 
-    return response.json.map((project: Record<string, unknown>) => ({
-      id: project.id as string,
-      key: project.key as string,
-      name: project.name as string,
+    const projects = z.array(jiraProjectSchema).parse(response.json);
+    return projects.map(project => ({
+      id: project.id,
+      key: project.key,
+      name: project.name,
       issueTypes: [],
-      avatarUrl: (project.avatarUrls as Record<string, string>)?.['48x48'],
+      avatarUrl: project.avatarUrls?.['48x48'],
     }));
   }
 
@@ -99,11 +110,12 @@ export class JiraClient {
       throw new Error(`Failed to fetch issue types: ${response.status}`);
     }
 
-    return response.json.issueTypes.map((type: Record<string, unknown>) => ({
-      id: type.id as string,
-      name: type.name as string,
-      iconUrl: type.iconUrl as string | undefined,
-      subtask: type.subtask as boolean,
+    const data = jiraIssueTypeResponseSchema.parse(response.json);
+    return data.issueTypes.map(type => ({
+      id: type.id,
+      name: type.name,
+      iconUrl: type.iconUrl,
+      subtask: type.subtask,
     }));
   }
 
@@ -118,10 +130,11 @@ export class JiraClient {
       throw new Error(`Failed to fetch priorities: ${response.status}`);
     }
 
-    return response.json.map((priority: Record<string, unknown>) => ({
-      id: priority.id as string,
-      name: priority.name as string,
-      iconUrl: priority.iconUrl as string | undefined,
+    const priorities = z.array(jiraPrioritySchema).parse(response.json);
+    return priorities.map(priority => ({
+      id: priority.id,
+      name: priority.name,
+      iconUrl: priority.iconUrl,
     }));
   }
 
@@ -165,9 +178,10 @@ export class JiraClient {
       throw new Error(`Failed to fetch assignable users: ${response.status}`);
     }
 
-    return response.json.map((user: Record<string, unknown>) => ({
-      accountId: user.accountId as string,
-      displayName: user.displayName as string,
+    const users = z.array(jiraUserSchema).parse(response.json);
+    return users.map(user => ({
+      accountId: user.accountId,
+      displayName: user.displayName,
     }));
   }
 
@@ -450,14 +464,15 @@ export class JiraClient {
       throw new Error(`Failed to fetch transitions: ${response.status}`);
     }
 
-    return response.json.transitions.map((t: Record<string, unknown>) => ({
-      id: t.id as string,
-      name: t.name as string,
-      to: t.to as JiraStatus,
-      hasScreen: t.hasScreen as boolean,
-      isGlobal: t.isGlobal as boolean,
-      isInitial: t.isInitial as boolean,
-      isConditional: t.isConditional as boolean,
+    const data = jiraTransitionsResponseSchema.parse(response.json);
+    return data.transitions.map(t => ({
+      id: t.id,
+      name: t.name,
+      to: t.to,
+      hasScreen: t.hasScreen,
+      isGlobal: t.isGlobal,
+      isInitial: t.isInitial,
+      isConditional: t.isConditional,
     }));
   }
 
@@ -494,11 +509,12 @@ export class JiraClient {
         return [];
       }
 
-      return (response.json.values || []).map((board: Record<string, unknown>) => ({
+      const data = jiraPaginatedResponseSchema(jiraBoardSchema).parse(response.json);
+      return (data.values ?? []).map(board => ({
         id: String(board.id),
-        name: board.name as string,
-        type: board.type as 'scrum' | 'kanban' | 'simple',
-        location: board.location as JiraBoard['location'],
+        name: board.name,
+        type: board.type,
+        location: board.location,
       }));
     } catch {
       return [];
@@ -517,13 +533,14 @@ export class JiraClient {
         return [];
       }
 
-      return (response.json.values || []).map((sprint: Record<string, unknown>) => ({
-        id: sprint.id as number,
-        name: sprint.name as string,
-        state: sprint.state as 'active' | 'future' | 'closed',
-        startDate: sprint.startDate as string | undefined,
-        endDate: sprint.endDate as string | undefined,
-        goal: sprint.goal as string | undefined,
+      const data = jiraPaginatedResponseSchema(jiraSprintSchema).parse(response.json);
+      return (data.values ?? []).map(sprint => ({
+        id: sprint.id,
+        name: sprint.name,
+        state: sprint.state,
+        startDate: sprint.startDate,
+        endDate: sprint.endDate,
+        goal: sprint.goal,
       }));
     } catch {
       return [];

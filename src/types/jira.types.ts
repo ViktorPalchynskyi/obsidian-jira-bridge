@@ -125,7 +125,7 @@ export interface JiraBoard {
   id: string;
   name: string;
   type: 'scrum' | 'kanban' | 'simple';
-  location: {
+  location?: {
     projectId?: number;
     projectKey?: string;
     projectName?: string;

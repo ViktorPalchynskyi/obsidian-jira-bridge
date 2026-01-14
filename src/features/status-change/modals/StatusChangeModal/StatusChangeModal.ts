@@ -25,6 +25,19 @@ interface ModalState {
   availableSprints: JiraSprint[];
 }
 
+function isJiraStatus(value: unknown): value is JiraStatus {
+  if (typeof value !== 'object' || value === null) return false;
+  return (
+    'id' in value &&
+    typeof value.id === 'string' &&
+    'name' in value &&
+    typeof value.name === 'string' &&
+    'statusCategory' in value &&
+    typeof value.statusCategory === 'object' &&
+    value.statusCategory !== null
+  );
+}
+
 export class StatusChangeModal extends BaseModal<StatusChangeResult> {
   private state: ModalState;
   private client: JiraClient | null = null;
@@ -300,7 +313,7 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
 
     try {
       const issue = await this.client.getIssue(this.state.issueKey, ['summary', 'status']);
-      this.state.currentStatus = issue.fields.status as JiraStatus | null;
+      this.state.currentStatus = isJiraStatus(issue.fields.status) ? issue.fields.status : null;
       this.state.issueSummary = String(issue.fields.summary || '');
       this.state.issueKey = issue.key;
 
@@ -578,8 +591,10 @@ export class StatusChangeModal extends BaseModal<StatusChangeResult> {
           name: 'transition',
           value: transition.id,
         },
-      }) as HTMLInputElement;
-      radio.checked = transition.id === this.state.selectedTransitionId;
+      });
+      if (radio instanceof HTMLInputElement) {
+        radio.checked = transition.id === this.state.selectedTransitionId;
+      }
 
       const label = item.createDiv({ cls: 'transition-label' });
       label.createSpan({ text: transition.name, cls: 'transition-name' });

@@ -1,5 +1,11 @@
 import type { ServiceToken } from '../types';
 
+function assertServiceInstance<T>(_token: ServiceToken<T>, value: unknown): asserts value is T {
+  if (value === undefined) {
+    throw new Error('Service instance is undefined');
+  }
+}
+
 export class ServiceContainer {
   private instances = new Map<string, unknown>();
   private factories = new Map<string, () => unknown>();
@@ -20,7 +26,9 @@ export class ServiceContainer {
 
   get<T>(token: ServiceToken<T>): T {
     if (this.instances.has(token.name)) {
-      return this.instances.get(token.name) as T;
+      const cached = this.instances.get(token.name);
+      assertServiceInstance(token, cached);
+      return cached;
     }
 
     const factory = this.factories.get(token.name);
@@ -28,7 +36,8 @@ export class ServiceContainer {
       throw new Error(`Service not registered: ${token.name}`);
     }
 
-    const instance = factory() as T;
+    const instance = factory();
+    assertServiceInstance(token, instance);
 
     if (this.singletons.has(token.name)) {
       this.instances.set(token.name, instance);

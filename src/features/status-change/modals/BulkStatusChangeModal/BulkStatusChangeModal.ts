@@ -8,6 +8,11 @@ import { parseSummaryFromContent } from '../../../../utils';
 import { DEFAULT_CONTENT_PARSING } from '../../../../constants/defaults';
 import { isFolder, collectMarkdownFiles } from '../../../../services/utils';
 
+function hasNameProperty(value: unknown): value is { name: string } {
+  if (typeof value !== 'object' || value === null) return false;
+  return 'name' in value && typeof value.name === 'string';
+}
+
 interface ModalState {
   instanceId: string;
   isLoading: boolean;
@@ -136,8 +141,8 @@ export class BulkStatusChangeModal extends BaseModal<BulkStatusChangeModalResult
       this.state.sampleIssueKey = firstFileWithIssue.issueKey;
 
       const issue = await this.client.getIssue(this.state.sampleIssueKey, ['status']);
-      const status = issue.fields.status as { name?: string } | undefined;
-      this.state.currentStatus = status?.name || '';
+      const status = issue.fields.status;
+      this.state.currentStatus = hasNameProperty(status) ? status.name : '';
 
       await Promise.all([this.loadTransitions(), this.loadSprintInfo()]);
     } catch (error) {
@@ -284,8 +289,10 @@ export class BulkStatusChangeModal extends BaseModal<BulkStatusChangeModalResult
     const noneRadio = noneItem.createEl('input', {
       type: 'radio',
       attr: { name: 'transition', value: 'none' },
-    }) as HTMLInputElement;
-    noneRadio.checked = this.state.selectedTransitionId === null;
+    });
+    if (noneRadio instanceof HTMLInputElement) {
+      noneRadio.checked = this.state.selectedTransitionId === null;
+    }
 
     const noneLabel = noneItem.createDiv({ cls: 'transition-label' });
     noneLabel.createSpan({ text: 'No change', cls: 'transition-name' });
@@ -307,8 +314,10 @@ export class BulkStatusChangeModal extends BaseModal<BulkStatusChangeModalResult
           name: 'transition',
           value: transition.id,
         },
-      }) as HTMLInputElement;
-      radio.checked = transition.id === this.state.selectedTransitionId;
+      });
+      if (radio instanceof HTMLInputElement) {
+        radio.checked = transition.id === this.state.selectedTransitionId;
+      }
 
       const label = item.createDiv({ cls: 'transition-label' });
       label.createSpan({ text: transition.name, cls: 'transition-name' });
@@ -376,8 +385,10 @@ export class BulkStatusChangeModal extends BaseModal<BulkStatusChangeModalResult
     const radio = item.createEl('input', {
       type: 'radio',
       attr: { name: 'location', value: action },
-    }) as HTMLInputElement;
-    radio.checked = this.state.locationAction === action;
+    });
+    if (radio instanceof HTMLInputElement) {
+      radio.checked = this.state.locationAction === action;
+    }
 
     const labelEl = item.createDiv({ cls: 'location-label' });
     labelEl.createSpan({ text: label });

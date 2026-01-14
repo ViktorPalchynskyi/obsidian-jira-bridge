@@ -121,10 +121,12 @@ export interface CreateIssueResponse {
   self: string;
 }
 
+export type BoardType = 'scrum' | 'kanban' | 'simple';
+
 export interface JiraBoard {
   id: string;
   name: string;
-  type: 'scrum' | 'kanban' | 'simple';
+  type: BoardType;
   location?: {
     projectId?: number;
     projectKey?: string;

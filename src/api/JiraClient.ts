@@ -12,6 +12,7 @@ import type {
   JiraSprint,
   JiraSprintInfo,
   JiraIssueData,
+  BoardType,
 } from '../types';
 import type { TestConnectionResult, JiraUser } from './types';
 import { markdownToAdf } from '../utils/markdownToAdf';
@@ -25,7 +26,18 @@ import {
   jiraBoardSchema,
   jiraSprintSchema,
   jiraPaginatedResponseSchema,
+  jiraFieldMetaSchema,
+  jiraSearchResponseSchema,
+  jiraProjectStatusItemSchema,
+  jiraIssueTypeDetailedSchema,
+  jiraBoardConfigSchema,
+  jiraQuickFilterSchema,
+  jiraCreatedStatusSchema,
 } from './schemas';
+
+function isBoardType(value: string | undefined): value is BoardType {
+  return value === 'scrum' || value === 'kanban' || value === 'simple';
+}
 
 export class JiraClient {
   constructor(private instance: JiraInstance) {}
@@ -149,21 +161,19 @@ export class JiraClient {
       throw new Error(`Failed to fetch fields: ${response.status}`);
     }
 
-    const fields = response.json.fields || response.json.values || [];
+    const rawFields = response.json.fields || response.json.values || [];
+    const fields = z.array(jiraFieldMetaSchema).parse(rawFields);
     const systemFields = ['summary', 'description', 'issuetype', 'project', 'priority', 'reporter', 'attachment', 'issuerestriction'];
 
     return fields
-      .filter((field: Record<string, unknown>) => {
-        const fieldId = field.fieldId as string;
-        return !systemFields.includes(fieldId);
-      })
-      .map((field: Record<string, unknown>) => ({
-        fieldId: field.fieldId as string,
-        name: field.name as string,
-        required: field.required as boolean,
-        schema: field.schema as JiraFieldMeta['schema'],
-        allowedValues: field.allowedValues as JiraFieldMeta['allowedValues'],
-        autoCompleteUrl: field.autoCompleteUrl as string | undefined,
+      .filter(field => !systemFields.includes(field.fieldId))
+      .map(field => ({
+        fieldId: field.fieldId,
+        name: field.name,
+        required: field.required,
+        schema: field.schema,
+        allowedValues: field.allowedValues,
+        autoCompleteUrl: field.autoCompleteUrl,
       }));
   }
 
@@ -213,15 +223,12 @@ export class JiraClient {
       throw new Error(`Failed to search issues: ${response.status}`);
     }
 
-    return response.json.issues.map((issue: Record<string, unknown>) => {
-      const fields = issue.fields as Record<string, unknown>;
-      const issueType = fields.issuetype as Record<string, unknown>;
-      return {
-        key: issue.key as string,
-        summary: fields.summary as string,
-        issueType: issueType.name as string,
-      };
-    });
+    const data = jiraSearchResponseSchema.parse(response.json);
+    return data.issues.map(issue => ({
+      key: issue.key,
+      summary: issue.fields.summary,
+      issueType: issue.fields.issuetype?.name ?? '',
+    }));
   }
 
   async searchIssuesBySummary(
@@ -244,15 +251,12 @@ export class JiraClient {
       throw new Error(`Failed to search issues: ${response.status}`);
     }
 
-    return response.json.issues.map((issue: Record<string, unknown>) => {
-      const fields = issue.fields as Record<string, unknown>;
-      const issueType = fields.issuetype as Record<string, unknown>;
-      return {
-        key: issue.key as string,
-        summary: fields.summary as string,
-        issueType: issueType.name as string,
-      };
-    });
+    const data = jiraSearchResponseSchema.parse(response.json);
+    return data.issues.map(issue => ({
+      key: issue.key,
+      summary: issue.fields.summary,
+      issueType: issue.fields.issuetype?.name ?? '',
+    }));
   }
 
   async findDuplicateBySummary(projectKey: string, summary: string): Promise<{ key: string; summary: string } | null> {
@@ -270,12 +274,12 @@ export class JiraClient {
       return null;
     }
 
+    const data = jiraSearchResponseSchema.parse(response.json);
     const normalizedSearch = summary.toLowerCase().trim();
-    for (const issue of response.json.issues) {
-      const fields = issue.fields as Record<string, unknown>;
-      const issueSummary = (fields.summary as string).toLowerCase().trim();
+    for (const issue of data.issues) {
+      const issueSummary = issue.fields.summary.toLowerCase().trim();
       if (issueSummary === normalizedSearch) {
-        return { key: issue.key as string, summary: fields.summary as string };
+        return { key: issue.key, summary: issue.fields.summary };
       }
     }
 
@@ -301,13 +305,14 @@ export class JiraClient {
         return result;
       }
 
+      const data = jiraSearchResponseSchema.parse(response.json);
       const normalizedSummaries = new Map(summaries.map(s => [s.toLowerCase().trim(), s]));
 
-      for (const issue of response.json.issues) {
-        const fields = issue.fields as Record<string, unknown>;
-        const issueSummary = (fields.summary as string).toLowerCase().trim();
-        if (normalizedSummaries.has(issueSummary)) {
-          result.set(normalizedSummaries.get(issueSummary)!, issue.key as string);
+      for (const issue of data.issues) {
+        const issueSummary = issue.fields.summary.toLowerCase().trim();
+        const originalSummary = normalizedSummaries.get(issueSummary);
+        if (originalSummary !== undefined) {
+          result.set(originalSummary, issue.key);
         }
       }
     } catch {
@@ -357,7 +362,7 @@ export class JiraClient {
         body,
       });
     } catch (error: unknown) {
-      const err = error as { status?: number; text?: string };
+      const err = this.parseRequestError(error);
       let errorMessage = `Request failed: status ${err.status}`;
       if (err.text) {
         try {
@@ -437,17 +442,13 @@ export class JiraClient {
         return [];
       }
 
-      return response.json.issues.map((issue: Record<string, unknown>) => {
-        const fields = issue.fields as Record<string, unknown>;
-        const status = fields.status as Record<string, unknown> | undefined;
-        const issueType = fields.issuetype as Record<string, unknown> | undefined;
-        return {
-          key: issue.key as string,
-          summary: fields.summary as string,
-          status: status ? { name: status.name as string } : undefined,
-          issueType: issueType ? { name: issueType.name as string } : undefined,
-        };
-      });
+      const data = jiraSearchResponseSchema.parse(response.json);
+      return data.issues.map(issue => ({
+        key: issue.key,
+        summary: issue.fields.summary,
+        status: issue.fields.status ? { name: issue.fields.status.name } : undefined,
+        issueType: issue.fields.issuetype ? { name: issue.fields.issuetype.name } : undefined,
+      }));
     } catch {
       return [];
     }
@@ -495,6 +496,20 @@ export class JiraClient {
 
   private parseError(error: unknown): string {
     return mapJiraError(error);
+  }
+
+  private parseRequestError(error: unknown): { status?: number; text?: string } {
+    if (typeof error !== 'object' || error === null) {
+      return {};
+    }
+    const result: { status?: number; text?: string } = {};
+    if ('status' in error && typeof error.status === 'number') {
+      result.status = error.status;
+    }
+    if ('text' in error && typeof error.text === 'string') {
+      result.text = error.text;
+    }
+    return result;
   }
 
   async getBoardsForProject(projectKey: string): Promise<JiraBoard[]> {
@@ -752,13 +767,14 @@ export class JiraClient {
         return [];
       }
 
-      return (response.json || []).map((item: Record<string, unknown>) => ({
-        issueTypeId: item.id as string,
-        issueTypeName: item.name as string,
-        statuses: ((item.statuses as Record<string, unknown>[]) || []).map(s => ({
-          id: s.id as string,
-          name: s.name as string,
-          statusCategory: s.statusCategory as { id: number; key: string; name: string },
+      const data = z.array(jiraProjectStatusItemSchema).parse(response.json || []);
+      return data.map(item => ({
+        issueTypeId: item.id,
+        issueTypeName: item.name,
+        statuses: item.statuses.map(s => ({
+          id: s.id,
+          name: s.name,
+          statusCategory: s.statusCategory,
         })),
       }));
     } catch {
@@ -787,14 +803,15 @@ export class JiraClient {
         return [];
       }
 
-      const issueTypes = response.json.issueTypes || [];
-      return issueTypes.map((it: Record<string, unknown>) => ({
-        id: it.id as string,
-        name: it.name as string,
-        description: it.description as string | undefined,
-        iconUrl: it.iconUrl as string | undefined,
-        subtask: it.subtask as boolean,
-        hierarchyLevel: (it.hierarchyLevel as number) || 0,
+      const rawIssueTypes = response.json.issueTypes || [];
+      const issueTypes = z.array(jiraIssueTypeDetailedSchema).parse(rawIssueTypes);
+      return issueTypes.map(it => ({
+        id: it.id,
+        name: it.name,
+        description: it.description,
+        iconUrl: it.iconUrl,
+        subtask: it.subtask,
+        hierarchyLevel: it.hierarchyLevel ?? 0,
       }));
     } catch {
       return [];
@@ -825,26 +842,28 @@ export class JiraClient {
         return null;
       }
 
-      const config = response.json;
+      const config = jiraBoardConfigSchema.parse(response.json);
+      const normalizedType = config.type?.toLowerCase();
+      const boardType: BoardType = isBoardType(normalizedType) ? normalizedType : 'kanban';
       return {
         id: config.id,
         name: config.name,
-        type: config.type?.toLowerCase() || 'kanban',
+        type: boardType,
         filter: {
-          id: String(config.filter?.id || ''),
-          name: config.filter?.name || '',
-          query: config.filter?.query || '',
+          id: String(config.filter?.id ?? ''),
+          name: config.filter?.name ?? '',
+          query: config.filter?.query ?? '',
         },
         subQuery: config.subQuery ? { query: config.subQuery.query } : undefined,
         columnConfig: {
-          columns: (config.columnConfig?.columns || []).map((col: Record<string, unknown>) => ({
-            name: col.name as string,
-            statuses: ((col.statuses as Record<string, unknown>[]) || []).map(s => ({
-              id: s.id as string,
-              name: (s.self as string)?.split('/').pop() || (s.id as string),
+          columns: (config.columnConfig?.columns ?? []).map(col => ({
+            name: col.name,
+            statuses: (col.statuses ?? []).map(s => ({
+              id: s.id,
+              name: s.self?.split('/').pop() ?? s.id,
             })),
-            min: col.min as number | undefined,
-            max: col.max as number | undefined,
+            min: col.min,
+            max: col.max,
           })),
           constraintType: config.columnConfig?.constraintType,
         },
@@ -875,11 +894,12 @@ export class JiraClient {
         return [];
       }
 
-      return (response.json.values || []).map((qf: Record<string, unknown>) => ({
+      const data = jiraPaginatedResponseSchema(jiraQuickFilterSchema).parse(response.json);
+      return (data.values ?? []).map(qf => ({
         id: String(qf.id),
-        name: qf.name as string,
-        query: qf.query as string,
-        description: qf.description as string | undefined,
+        name: qf.name,
+        query: qf.query,
+        description: qf.description,
       }));
     } catch {
       return [];
@@ -937,9 +957,10 @@ export class JiraClient {
       throw new Error(errorMessage);
     }
 
-    return (response.json || []).map((s: Record<string, unknown>) => ({
-      id: s.id as string,
-      name: s.name as string,
+    const data = z.array(jiraCreatedStatusSchema).parse(response.json || []);
+    return data.map(s => ({
+      id: s.id,
+      name: s.name,
     }));
   }
 }

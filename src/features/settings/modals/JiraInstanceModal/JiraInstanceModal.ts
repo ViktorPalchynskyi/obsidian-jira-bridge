@@ -9,6 +9,22 @@ const FIELD_HINTS: Partial<Record<keyof JiraInstanceFormData, string>> = {
   apiToken: 'Create at: id.atlassian.com → Security → API tokens',
 };
 
+const FORM_FIELD_KEYS: Record<keyof JiraInstanceFormData, true> = {
+  name: true,
+  baseUrl: true,
+  email: true,
+  apiToken: true,
+};
+
+function isFormFieldKey(key: string): key is keyof JiraInstanceFormData {
+  return key in FORM_FIELD_KEYS;
+}
+
+function getErrorElement(form: HTMLElement, name: string): HTMLSpanElement | null {
+  const el = form.querySelector(`[data-error="${name}"]`);
+  return el instanceof HTMLSpanElement ? el : null;
+}
+
 export class JiraInstanceModal extends BaseModal<JiraInstance> {
   private formElements: FormElements | null = null;
   private errorElements: ErrorElements | null = null;
@@ -45,12 +61,18 @@ export class JiraInstanceModal extends BaseModal<JiraInstance> {
       this.prefillForm(this.options.instance);
     }
 
-    this.errorElements = {
-      name: form.querySelector('[data-error="name"]') as HTMLSpanElement,
-      baseUrl: form.querySelector('[data-error="baseUrl"]') as HTMLSpanElement,
-      email: form.querySelector('[data-error="email"]') as HTMLSpanElement,
-      apiToken: form.querySelector('[data-error="apiToken"]') as HTMLSpanElement,
-    };
+    const nameError = getErrorElement(form, 'name');
+    const baseUrlError = getErrorElement(form, 'baseUrl');
+    const emailError = getErrorElement(form, 'email');
+    const apiTokenError = getErrorElement(form, 'apiToken');
+    if (nameError && baseUrlError && emailError && apiTokenError) {
+      this.errorElements = {
+        name: nameError,
+        baseUrl: baseUrlError,
+        email: emailError,
+        apiToken: apiTokenError,
+      };
+    }
 
     const buttonContainer = contentEl.createEl('div', { cls: 'modal-buttons' });
 
@@ -179,9 +201,9 @@ export class JiraInstanceModal extends BaseModal<JiraInstance> {
 
     if (!validation.valid) {
       for (const [field, error] of Object.entries(validation.errors)) {
-        if (error) {
-          this.showFieldError(field as keyof JiraInstanceFormData, error);
-          this.fieldErrors[field as keyof JiraInstanceFormData] = error;
+        if (error && isFormFieldKey(field)) {
+          this.showFieldError(field, error);
+          this.fieldErrors[field] = error;
         }
       }
       this.updateSubmitButtonState();

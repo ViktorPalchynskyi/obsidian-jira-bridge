@@ -18,6 +18,18 @@ const BUILT_IN_FIELDS: { type: BuiltInFieldType; label: string }[] = [
   { type: 'priority', label: 'Priority' },
 ];
 
+const BUILT_IN_FIELD_TYPE_SET: Record<BuiltInFieldType, true> = {
+  issue_type: true,
+  labels: true,
+  parent: true,
+  priority: true,
+  assignee: true,
+};
+
+function isBuiltInFieldType(id: string): id is BuiltInFieldType {
+  return id in BUILT_IN_FIELD_TYPE_SET;
+}
+
 export class FrontmatterMappingModal extends BaseModal<FrontmatterMappingModalResult> {
   private options: FrontmatterMappingModalOptions;
   private localConfig: ProjectMappingConfig;
@@ -258,7 +270,7 @@ export class FrontmatterMappingModal extends BaseModal<FrontmatterMappingModalRe
 
       const newMapping: FrontmatterFieldMapping = {
         frontmatterKey,
-        jiraFieldType: selectedOption.isBuiltIn ? (selectedId as BuiltInFieldType) : 'custom',
+        jiraFieldType: selectedOption.isBuiltIn && isBuiltInFieldType(selectedId) ? selectedId : 'custom',
       };
 
       if (!selectedOption.isBuiltIn) {

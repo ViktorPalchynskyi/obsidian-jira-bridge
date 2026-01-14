@@ -801,7 +801,7 @@ export class JiraBridgePlugin extends Plugin {
     const parent = endFile.parent;
     if (!parent) return;
 
-    const files = parent.children.filter(f => f instanceof TFile && f.extension === 'md') as TFile[];
+    const files = parent.children.filter((f): f is TFile => f instanceof TFile && f.extension === 'md');
 
     const startIndex = files.findIndex(f => f.path === this.lastClickedFile!.path);
     const endIndex = files.findIndex(f => f.path === endFile.path);
@@ -917,10 +917,18 @@ export class JiraBridgePlugin extends Plugin {
   }
 
   private openSettings(): void {
-    const settingModal = (this.app as { setting?: { open: () => void; openTabById: (id: string) => void } }).setting;
-    if (settingModal) {
-      settingModal.open();
-      settingModal.openTabById(this.manifest.id);
+    const app = this.app;
+    if (!('setting' in app) || typeof app.setting !== 'object' || app.setting === null) {
+      return;
     }
+    const setting = app.setting;
+    if (!('open' in setting) || typeof setting.open !== 'function') {
+      return;
+    }
+    if (!('openTabById' in setting) || typeof setting.openTabById !== 'function') {
+      return;
+    }
+    setting.open();
+    setting.openTabById(this.manifest.id);
   }
 }

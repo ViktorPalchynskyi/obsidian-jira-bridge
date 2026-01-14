@@ -7,13 +7,17 @@ type HandlersStore = {
 export class EventBus implements EventBusType {
   private handlers: HandlersStore = {};
 
+  private setHandlers<K extends EventName>(event: K, handlers: Set<EventHandler<K>>): void {
+    (this.handlers as Record<K, Set<EventHandler<K>>>)[event] = handlers;
+  }
+
   private getOrCreateHandlers<K extends EventName>(event: K): Set<EventHandler<K>> {
     const existing = this.handlers[event];
     if (existing) {
       return existing;
     }
     const newSet = new Set<EventHandler<K>>();
-    (this.handlers as Record<K, Set<EventHandler<K>>>)[event] = newSet;
+    this.setHandlers(event, newSet);
     return newSet;
   }
 

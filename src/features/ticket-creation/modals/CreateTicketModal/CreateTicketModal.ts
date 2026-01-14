@@ -880,17 +880,17 @@ export class CreateTicketModal extends BaseModal<CreateTicketResult> {
   }
 
   private extractId(value: unknown): string | undefined {
-    if (typeof value === 'object' && value !== null && 'id' in value) {
-      const id = (value as { id: unknown }).id;
-      return typeof id === 'string' ? id : undefined;
+    if (typeof value !== 'object' || value === null) return undefined;
+    if ('id' in value && typeof value.id === 'string') {
+      return value.id;
     }
     return undefined;
   }
 
   private extractDisplayName(value: unknown): string | undefined {
-    if (typeof value === 'object' && value !== null && 'displayName' in value) {
-      const name = (value as { displayName: unknown }).displayName;
-      return typeof name === 'string' ? name : undefined;
+    if (typeof value !== 'object' || value === null) return undefined;
+    if ('displayName' in value && typeof value.displayName === 'string') {
+      return value.displayName;
     }
     return undefined;
   }

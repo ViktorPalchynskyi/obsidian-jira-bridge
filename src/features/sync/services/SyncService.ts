@@ -94,7 +94,7 @@ export class SyncService {
 
       return result;
     } catch (error) {
-      const err = error as Error;
+      const err = error instanceof Error ? error : new Error(String(error));
 
       if (err.message.includes('404')) {
         await addFrontmatterFields(this.app, file, {
@@ -174,8 +174,8 @@ export class SyncService {
       for (const child of folder.children) {
         if (child instanceof TFile && child.extension === 'md') {
           files.push(child);
-        } else if ('children' in child) {
-          collectFiles(child as TFolder);
+        } else if (child instanceof TFolder) {
+          collectFiles(child);
         }
       }
     };
@@ -318,11 +318,11 @@ export class SyncService {
     }
 
     if (typeof value === 'object') {
-      if ('name' in value) {
-        return (value as { name: string }).name;
+      if ('name' in value && typeof value.name === 'string') {
+        return value.name;
       }
-      if ('displayName' in value) {
-        return (value as { displayName: string }).displayName;
+      if ('displayName' in value && typeof value.displayName === 'string') {
+        return value.displayName;
       }
       return JSON.stringify(value);
     }

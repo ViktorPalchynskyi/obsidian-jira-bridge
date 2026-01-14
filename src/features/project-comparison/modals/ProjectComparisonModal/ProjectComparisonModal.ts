@@ -5,6 +5,10 @@ import type { ComparisonStep, ComparisonState, ProjectSelection, ProjectComparis
 import { JiraClient } from '../../../../api/JiraClient';
 import { ProjectComparisonService, type ComparisonProjectInfo } from '../../services';
 
+function isComparisonStep(value: number): value is ComparisonStep {
+  return value === 1 || value === 2 || value === 3 || value === 4;
+}
+
 export class ProjectComparisonModal extends BaseModal<void> {
   private options: ProjectComparisonModalOptions;
   private comparisonService: ProjectComparisonService;
@@ -484,7 +488,12 @@ export class ProjectComparisonModal extends BaseModal<void> {
           text: 'Back',
           cls: 'modal-button',
         })
-        .addEventListener('click', () => this.goToStep((this.state.currentStep - 1) as ComparisonStep));
+        .addEventListener('click', () => {
+          const prevStep = this.state.currentStep - 1;
+          if (isComparisonStep(prevStep)) {
+            this.goToStep(prevStep);
+          }
+        });
     }
 
     if (this.state.currentStep < 3) {
@@ -493,7 +502,12 @@ export class ProjectComparisonModal extends BaseModal<void> {
         cls: 'modal-button mod-cta',
       });
       nextBtn.disabled = !this.canProceed();
-      nextBtn.addEventListener('click', () => this.goToStep((this.state.currentStep + 1) as ComparisonStep));
+      nextBtn.addEventListener('click', () => {
+        const nextStep = this.state.currentStep + 1;
+        if (isComparisonStep(nextStep)) {
+          this.goToStep(nextStep);
+        }
+      });
     } else if (this.state.currentStep === 4) {
       rightButtons
         .createEl('button', {

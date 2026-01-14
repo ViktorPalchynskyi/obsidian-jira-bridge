@@ -92,8 +92,8 @@ export class SyncSettingsModal extends BaseModal<SyncSettingsModalResult> {
     this.modeButtonContainer.empty();
 
     const statusEl = this.contentEl.querySelector('.sync-status');
-    if (statusEl) {
-      this.updateStatusText(statusEl as HTMLElement);
+    if (statusEl instanceof HTMLElement) {
+      this.updateStatusText(statusEl);
     }
 
     if (!this.state.enableSync) {

@@ -13,6 +13,17 @@ export const jiraInstanceSchema = z.object({
 
 export type JiraInstanceFormData = z.infer<typeof jiraInstanceSchema>;
 
+const FORM_FIELD_KEYS: Record<keyof JiraInstanceFormData, true> = {
+  name: true,
+  baseUrl: true,
+  email: true,
+  apiToken: true,
+};
+
+function isFormField(value: unknown): value is keyof JiraInstanceFormData {
+  return typeof value === 'string' && value in FORM_FIELD_KEYS;
+}
+
 export interface FieldValidationResult {
   valid: boolean;
   error?: string;
@@ -43,8 +54,8 @@ export const validateForm = (
 
   const errors: Partial<Record<keyof JiraInstanceFormData, string>> = {};
   for (const issue of result.error.issues) {
-    const field = issue.path[0] as keyof JiraInstanceFormData;
-    if (!errors[field]) {
+    const field = issue.path[0];
+    if (isFormField(field) && !errors[field]) {
       errors[field] = issue.message;
     }
   }

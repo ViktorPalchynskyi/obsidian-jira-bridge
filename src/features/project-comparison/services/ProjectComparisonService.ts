@@ -1,5 +1,17 @@
 import type { JiraClient } from '../../../api/JiraClient';
-import type { ConfigurationDiff, DiffCategory, FieldConfig, IssueTypeConfig, WorkflowConfig, BoardDetailedConfig } from '../../../types';
+import type {
+  ConfigurationDiff,
+  DiffCategory,
+  FieldConfig,
+  IssueTypeConfig,
+  WorkflowConfig,
+  BoardDetailedConfig,
+  ConstraintType,
+} from '../../../types';
+
+function isConstraintType(value: string | undefined): value is ConstraintType {
+  return value === undefined || value === 'none' || value === 'issueCount' || value === 'issueCountExclSubs';
+}
 
 interface ProjectConfig {
   key: string;
@@ -102,7 +114,7 @@ export class ProjectComparisonService {
             min: col.min,
             max: col.max,
           })),
-          constraintType: config.columnConfig.constraintType as BoardDetailedConfig['columnConfig']['constraintType'],
+          constraintType: isConstraintType(config.columnConfig.constraintType) ? config.columnConfig.constraintType : undefined,
         },
         quickFilters: quickFilters.map(qf => ({
           id: qf.id,

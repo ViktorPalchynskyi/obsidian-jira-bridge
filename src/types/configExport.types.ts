@@ -79,9 +79,11 @@ export interface BoardColumn {
   max?: number;
 }
 
+export type ConstraintType = 'none' | 'issueCount' | 'issueCountExclSubs';
+
 export interface BoardColumnConfig {
   columns: BoardColumn[];
-  constraintType?: 'none' | 'issueCount' | 'issueCountExclSubs';
+  constraintType?: ConstraintType;
 }
 
 export interface BoardFilter {

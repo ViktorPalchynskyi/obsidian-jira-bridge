@@ -13,6 +13,14 @@ import { JiraClient } from '../../../api/JiraClient';
 import { parseSummaryFromContent } from '../../../utils';
 import { addFrontmatterFields } from '../../../utils/frontmatter';
 import { DEFAULT_CONTENT_PARSING } from '../../../constants/defaults';
+
+function getStatusName(status: unknown): string {
+  if (typeof status !== 'object' || status === null) return '';
+  if ('name' in status && typeof status.name === 'string') {
+    return status.name;
+  }
+  return '';
+}
 import { collectMarkdownFiles } from '../../../services/utils';
 
 export interface BulkStatusChangeOptions {
@@ -94,8 +102,7 @@ export class BulkStatusChangeService {
 
       try {
         const issue = await client.getIssue(note.issueKey, ['status']);
-        const statusField = issue.fields.status as { name?: string } | undefined;
-        const oldStatus = statusField?.name || '';
+        const oldStatus = getStatusName(issue.fields.status);
 
         if (options.transitionId) {
           await client.transitionIssue(note.issueKey, options.transitionId);

@@ -18,3 +18,12 @@ export interface SearchIssueResult {
   status: string;
   issueType: string;
 }
+
+export interface LinkTicketModalState {
+  selectedInstanceId: string;
+  searchQuery: string;
+  isSearching: boolean;
+  searchResults: SearchIssueResult[];
+  selectedIssueKey: string | null;
+  error: string | null;
+}

@@ -1,15 +1,8 @@
 import { App } from 'obsidian';
 import { BaseModal } from '../../../../ui/modals/BaseModal/BaseModal';
 import type { FrontmatterFieldMapping, BuiltInFieldType, ProjectMappingConfig } from '../../../../types';
-import type { FrontmatterMappingModalOptions, FrontmatterMappingModalResult } from './types';
+import type { FrontmatterMappingModalOptions, FrontmatterMappingModalResult, FieldOption } from './types';
 import { DEFAULT_CONTENT_PARSING } from '../../../../constants/defaults';
-
-interface FieldOption {
-  id: string;
-  label: string;
-  isBuiltIn: boolean;
-  customFieldId?: string;
-}
 
 const BUILT_IN_FIELDS: { type: BuiltInFieldType; label: string }[] = [
   { type: 'issue_type', label: 'Issue Type' },

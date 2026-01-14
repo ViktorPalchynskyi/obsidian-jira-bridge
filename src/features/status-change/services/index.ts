@@ -7,4 +7,5 @@ export type {
   StatusChangeProgressCallback,
   SkippedNote,
   FailedNote,
+  BulkStatusChangeOptions,
 } from './types';

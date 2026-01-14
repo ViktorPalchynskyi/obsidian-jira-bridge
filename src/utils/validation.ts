@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import type { FieldValidationResult } from './types';
+
+export type { FieldValidationResult };
 
 export const jiraInstanceSchema = z.object({
   name: z.string().min(1, 'Name is required').max(50, 'Name is too long'),
@@ -22,11 +25,6 @@ const FORM_FIELD_KEYS: Record<keyof JiraInstanceFormData, true> = {
 
 function isFormField(value: unknown): value is keyof JiraInstanceFormData {
   return typeof value === 'string' && value in FORM_FIELD_KEYS;
-}
-
-export interface FieldValidationResult {
-  valid: boolean;
-  error?: string;
 }
 
 export const validateField = (fieldName: keyof JiraInstanceFormData, value: string): FieldValidationResult => {

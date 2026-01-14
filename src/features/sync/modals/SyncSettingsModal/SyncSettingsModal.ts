@@ -1,17 +1,10 @@
 import { App } from 'obsidian';
 import { BaseModal } from '../../../../ui/modals/BaseModal/BaseModal';
-import type { SyncSettingsModalOptions, SyncSettingsModalResult } from './types';
-import type { SyncFieldConfig } from '../../../../types';
-
-interface ModalState {
-  enableSync: boolean;
-  isCustom: boolean;
-  customSyncFields: SyncFieldConfig[];
-}
+import type { SyncSettingsModalOptions, SyncSettingsModalResult, SyncSettingsModalState } from './types';
 
 export class SyncSettingsModal extends BaseModal<SyncSettingsModalResult> {
   private options: SyncSettingsModalOptions;
-  private state: ModalState;
+  private state: SyncSettingsModalState;
   private fieldsContainer: HTMLElement | null = null;
   private modeButtonContainer: HTMLElement | null = null;
 

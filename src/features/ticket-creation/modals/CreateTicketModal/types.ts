@@ -1,4 +1,13 @@
-import type { JiraInstance, ResolvedContext, CustomFieldConfig, ProjectMappingConfig } from '../../../../types';
+import type {
+  JiraInstance,
+  ResolvedContext,
+  CustomFieldConfig,
+  ProjectMappingConfig,
+  JiraProject,
+  JiraIssueType,
+  JiraPriority,
+  JiraFieldMeta,
+} from '../../../../types';
 
 export interface FrontmatterValues {
   issueType?: string;
@@ -32,4 +41,23 @@ export interface CreateTicketFormData {
   summary: string;
   description?: string;
   priority?: string;
+}
+
+export interface CreateTicketFormState {
+  summary: string;
+  description: string;
+  projectKey: string;
+  issueTypeId: string;
+  priorityId: string;
+  projects: JiraProject[];
+  issueTypes: JiraIssueType[];
+  priorities: JiraPriority[];
+  isLoadingProjects: boolean;
+  isLoadingIssueTypes: boolean;
+  isLoadingPriorities: boolean;
+  isSubmitting: boolean;
+  error: string | null;
+  customFieldValues: Record<string, unknown>;
+  customFieldsMeta: JiraFieldMeta[];
+  isLoadingCustomFields: boolean;
 }

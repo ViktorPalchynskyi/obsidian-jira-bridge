@@ -1,21 +1,4 @@
-interface AdfNode {
-  type: string;
-  attrs?: Record<string, unknown>;
-  content?: AdfNode[];
-  text?: string;
-  marks?: AdfMark[];
-}
-
-interface AdfMark {
-  type: string;
-  attrs?: Record<string, unknown>;
-}
-
-interface AdfDocument {
-  type: 'doc';
-  version: 1;
-  content: AdfNode[];
-}
+import type { AdfNode, AdfDocument } from './types';
 
 export function markdownToAdf(markdown: string): AdfDocument {
   const lines = markdown.split('\n');

@@ -1,7 +1,6 @@
-export interface DebouncedFunction<T extends (...args: never[]) => unknown> {
-  (...args: Parameters<T>): void;
-  cancel: () => void;
-}
+import type { DebouncedFunction } from './types';
+
+export type { DebouncedFunction };
 
 export function debounce<T extends (...args: never[]) => unknown>(fn: T, delay: number): DebouncedFunction<T> {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;

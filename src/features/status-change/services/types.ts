@@ -44,3 +44,11 @@ export interface BulkStatusChangeProgress {
 }
 
 export type StatusChangeProgressCallback = (progress: BulkStatusChangeProgress) => void;
+
+export interface BulkStatusChangeOptions {
+  transitionId?: string;
+  transitionName?: string;
+  agileAction?: 'backlog' | 'board' | 'sprint';
+  sprintId?: number;
+  boardId?: string;
+}

@@ -17,6 +17,10 @@ export type EventName = keyof EventMap;
 
 export type EventHandler<K extends EventName> = (payload: EventMap[K]) => void | Promise<void>;
 
+export type HandlersStore = {
+  [K in EventName]?: Set<EventHandler<K>>;
+};
+
 export type EventBus = {
   on<K extends EventName>(event: K, handler: EventHandler<K>): () => void;
   off<K extends EventName>(event: K, handler: EventHandler<K>): void;

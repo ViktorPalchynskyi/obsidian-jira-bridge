@@ -9,3 +9,10 @@ export interface FrontmatterMappingModalOptions {
 export interface FrontmatterMappingModalResult {
   projectConfig: ProjectMappingConfig;
 }
+
+export interface FieldOption {
+  id: string;
+  label: string;
+  isBuiltIn: boolean;
+  customFieldId?: string;
+}

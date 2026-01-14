@@ -1,4 +1,4 @@
-import type { JiraInstance, PluginSettings } from '../../../../types';
+import type { JiraInstance, PluginSettings, JiraTransition, JiraBoard, JiraSprint } from '../../../../types';
 import type { BulkOperationTarget } from '../../../../services/types';
 
 export interface BulkStatusChangeModalOptions {
@@ -15,4 +15,18 @@ export interface BulkStatusChangeModalResult {
   agileAction?: 'backlog' | 'board' | 'sprint';
   sprintId?: number;
   boardId?: string;
+}
+
+export interface BulkStatusChangeModalState {
+  instanceId: string;
+  isLoading: boolean;
+  sampleIssueKey: string | null;
+  currentStatus: string | null;
+  transitions: JiraTransition[];
+  selectedTransitionId: string | null;
+  error: string | null;
+  board: JiraBoard | null;
+  availableSprints: JiraSprint[];
+  locationAction: 'none' | 'backlog' | 'board' | 'sprint';
+  selectedSprintId: number | null;
 }

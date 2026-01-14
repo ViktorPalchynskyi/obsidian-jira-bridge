@@ -1,40 +1,17 @@
 import type { JiraClient } from '../../../api/JiraClient';
 import type {
-  ConfigurationDiff,
   DiffCategory,
+  ConstraintType,
+  BoardDetailedConfig,
+  WorkflowConfig,
   FieldConfig,
   IssueTypeConfig,
-  WorkflowConfig,
-  BoardDetailedConfig,
-  ConstraintType,
+  ConfigurationDiff,
 } from '../../../types';
+import type { ProjectConfig, ProjectComparisonResult } from './types';
 
 function isConstraintType(value: string | undefined): value is ConstraintType {
   return value === undefined || value === 'none' || value === 'issueCount' || value === 'issueCountExclSubs';
-}
-
-interface ProjectConfig {
-  key: string;
-  name: string;
-  fields: FieldConfig[];
-  issueTypes: IssueTypeConfig[];
-  workflows: WorkflowConfig[];
-  boards: BoardDetailedConfig[];
-}
-
-export interface ComparisonProjectInfo {
-  key: string;
-  name: string;
-  fieldsCount: number;
-  issueTypesCount: number;
-  workflowsCount: number;
-  boardsCount: number;
-}
-
-export interface ProjectComparisonResult {
-  diff: ConfigurationDiff;
-  projectAInfo: ComparisonProjectInfo;
-  projectBInfo: ComparisonProjectInfo;
 }
 
 export class ProjectComparisonService {

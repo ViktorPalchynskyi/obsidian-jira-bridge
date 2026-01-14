@@ -1,4 +1,4 @@
-import type { JiraInstance } from '../../../../types';
+import type { JiraInstance, JiraStatus, JiraTransition, JiraSprint, JiraBoard } from '../../../../types';
 
 export interface StatusChangeResult {
   issueKey: string;
@@ -19,4 +19,24 @@ export interface RecentIssue {
   summary: string;
   instanceId: string;
   timestamp: number;
+}
+
+export interface StatusChangeModalState {
+  issueKey: string;
+  instanceId: string;
+  isLoadingIssue: boolean;
+  isLoadingTransitions: boolean;
+  isSubmitting: boolean;
+  isSearching: boolean;
+  isLoadingSprint: boolean;
+  currentStatus: JiraStatus | null;
+  issueSummary: string;
+  transitions: JiraTransition[];
+  selectedTransitionId: string | null;
+  error: string | null;
+  searchResults: { key: string; summary: string }[];
+  sprint: JiraSprint | null;
+  inBacklog: boolean;
+  board: JiraBoard | null;
+  availableSprints: JiraSprint[];
 }

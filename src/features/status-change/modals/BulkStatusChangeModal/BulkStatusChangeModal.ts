@@ -1,7 +1,6 @@
 import { App, TFile } from 'obsidian';
 import { BaseModal } from '../../../../ui/modals/BaseModal/BaseModal';
-import type { BulkStatusChangeModalOptions, BulkStatusChangeModalResult } from './types';
-import type { JiraTransition, JiraBoard, JiraSprint } from '../../../../types';
+import type { BulkStatusChangeModalOptions, BulkStatusChangeModalResult, BulkStatusChangeModalState } from './types';
 import { JiraClient } from '../../../../api/JiraClient';
 import { MappingResolver } from '../../../../mapping';
 import { parseSummaryFromContent } from '../../../../utils';
@@ -13,22 +12,8 @@ function hasNameProperty(value: unknown): value is { name: string } {
   return 'name' in value && typeof value.name === 'string';
 }
 
-interface ModalState {
-  instanceId: string;
-  isLoading: boolean;
-  sampleIssueKey: string | null;
-  currentStatus: string | null;
-  transitions: JiraTransition[];
-  selectedTransitionId: string | null;
-  error: string | null;
-  board: JiraBoard | null;
-  availableSprints: JiraSprint[];
-  locationAction: 'none' | 'backlog' | 'board' | 'sprint';
-  selectedSprintId: number | null;
-}
-
 export class BulkStatusChangeModal extends BaseModal<BulkStatusChangeModalResult> {
-  private state: ModalState;
+  private state: BulkStatusChangeModalState;
   private client: JiraClient | null = null;
   private mappingResolver: MappingResolver;
   private statusContainer: HTMLDivElement | null = null;

@@ -1,14 +1,10 @@
-import type { EventHandler, EventBus as EventBusType, EventName, EventMap } from '../types';
-
-type HandlersStore = {
-  [K in EventName]?: Set<EventHandler<K>>;
-};
+import type { EventHandler, EventBus as EventBusType, EventName, EventMap, HandlersStore } from '../types';
 
 export class EventBus implements EventBusType {
   private handlers: HandlersStore = {};
 
   private setHandlers<K extends EventName>(event: K, handlers: Set<EventHandler<K>>): void {
-    (this.handlers as Record<K, Set<EventHandler<K>>>)[event] = handlers;
+    Object.assign(this.handlers, { [event]: handlers });
   }
 
   private getOrCreateHandlers<K extends EventName>(event: K): Set<EventHandler<K>> {

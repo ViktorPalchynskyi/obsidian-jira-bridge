@@ -1,32 +1,13 @@
 import { App, Notice } from 'obsidian';
 import { BaseModal } from '../../../../ui/modals/BaseModal/BaseModal';
 import { JiraClient } from '../../../../api';
-import type { JiraProject, JiraIssueType, JiraPriority, JiraFieldMeta } from '../../../../types';
-import type { CreateTicketModalOptions, CreateTicketResult } from './types';
+import type { CreateTicketModalOptions, CreateTicketResult, CreateTicketFormState } from './types';
+import type { JiraProject, JiraPriority, JiraFieldMeta } from '../../../../types';
 import { mapJiraError, NOTICE_DURATION } from '../../../../utils';
-
-interface FormState {
-  summary: string;
-  description: string;
-  projectKey: string;
-  issueTypeId: string;
-  priorityId: string;
-  projects: JiraProject[];
-  issueTypes: JiraIssueType[];
-  priorities: JiraPriority[];
-  isLoadingProjects: boolean;
-  isLoadingIssueTypes: boolean;
-  isLoadingPriorities: boolean;
-  isSubmitting: boolean;
-  error: string | null;
-  customFieldValues: Record<string, unknown>;
-  customFieldsMeta: JiraFieldMeta[];
-  isLoadingCustomFields: boolean;
-}
 
 export class CreateTicketModal extends BaseModal<CreateTicketResult> {
   private options: CreateTicketModalOptions;
-  private state: FormState;
+  private state: CreateTicketFormState;
   private summaryInput: HTMLInputElement | null = null;
   private projectSelect: HTMLSelectElement | null = null;
   private issueTypeSelect: HTMLSelectElement | null = null;

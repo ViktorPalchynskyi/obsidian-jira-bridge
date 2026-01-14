@@ -6,6 +6,7 @@ import type {
   StatusChangeProgressCallback,
   BulkStatusChangeProgress,
   SkippedNote,
+  BulkStatusChangeOptions,
 } from './types';
 import type { BulkOperationTarget } from '../../../services/types';
 import { MappingResolver } from '../../../mapping';
@@ -22,14 +23,6 @@ function getStatusName(status: unknown): string {
   return '';
 }
 import { collectMarkdownFiles } from '../../../services/utils';
-
-export interface BulkStatusChangeOptions {
-  transitionId?: string;
-  transitionName?: string;
-  agileAction?: 'backlog' | 'board' | 'sprint';
-  sprintId?: number;
-  boardId?: string;
-}
 
 export class BulkStatusChangeService {
   private mappingResolver: MappingResolver;

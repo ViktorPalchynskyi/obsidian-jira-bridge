@@ -1,2 +1,2 @@
 export { ProjectComparisonService } from './ProjectComparisonService';
-export type { ComparisonProjectInfo, ProjectComparisonResult } from './ProjectComparisonService';
+export type { ComparisonProjectInfo, ProjectComparisonResult, ProjectConfig } from './types';

@@ -1,21 +1,12 @@
 import { App, debounce } from 'obsidian';
 import { BaseModal } from '../../../../ui/modals/BaseModal/BaseModal';
-import type { LinkTicketModalOptions, LinkTicketModalResult, SearchIssueResult } from './types';
+import type { LinkTicketModalOptions, LinkTicketModalResult, LinkTicketModalState } from './types';
 import { JiraClient } from '../../../../api/JiraClient';
 import { mapJiraError } from '../../../../utils';
 
-interface ModalState {
-  selectedInstanceId: string;
-  searchQuery: string;
-  isSearching: boolean;
-  searchResults: SearchIssueResult[];
-  selectedIssueKey: string | null;
-  error: string | null;
-}
-
 export class LinkTicketModal extends BaseModal<LinkTicketModalResult> {
   private options: LinkTicketModalOptions;
-  private state: ModalState;
+  private state: LinkTicketModalState;
   private client: JiraClient | null = null;
   private searchInput: HTMLInputElement | null = null;
   private resultsContainer: HTMLElement | null = null;

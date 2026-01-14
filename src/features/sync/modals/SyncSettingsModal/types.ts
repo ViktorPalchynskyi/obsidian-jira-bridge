@@ -9,3 +9,9 @@ export interface SyncSettingsModalOptions {
 export interface SyncSettingsModalResult {
   syncConfig: ProjectSyncConfig;
 }
+
+export interface SyncSettingsModalState {
+  enableSync: boolean;
+  isCustom: boolean;
+  customSyncFields: SyncFieldConfig[];
+}

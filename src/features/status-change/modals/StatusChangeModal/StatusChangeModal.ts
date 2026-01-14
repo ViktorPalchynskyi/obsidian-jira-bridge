@@ -1,29 +1,9 @@
 import { App, Notice } from 'obsidian';
 import { BaseModal } from '../../../../ui/modals/BaseModal/BaseModal';
-import type { StatusChangeResult, StatusChangeModalOptions } from './types';
-import type { JiraTransition, JiraStatus, JiraSprint, JiraBoard } from '../../../../types';
+import type { StatusChangeResult, StatusChangeModalOptions, StatusChangeModalState } from './types';
+import type { JiraStatus } from '../../../../types';
 import { JiraClient } from '../../../../api/JiraClient';
 import { debounce, mapJiraError, NOTICE_DURATION, type DebouncedFunction } from '../../../../utils';
-
-interface ModalState {
-  issueKey: string;
-  instanceId: string;
-  isLoadingIssue: boolean;
-  isLoadingTransitions: boolean;
-  isSubmitting: boolean;
-  isSearching: boolean;
-  isLoadingSprint: boolean;
-  currentStatus: JiraStatus | null;
-  issueSummary: string;
-  transitions: JiraTransition[];
-  selectedTransitionId: string | null;
-  error: string | null;
-  searchResults: { key: string; summary: string }[];
-  sprint: JiraSprint | null;
-  inBacklog: boolean;
-  board: JiraBoard | null;
-  availableSprints: JiraSprint[];
-}
 
 function isJiraStatus(value: unknown): value is JiraStatus {
   if (typeof value !== 'object' || value === null) return false;
@@ -39,7 +19,7 @@ function isJiraStatus(value: unknown): value is JiraStatus {
 }
 
 export class StatusChangeModal extends BaseModal<StatusChangeResult> {
-  private state: ModalState;
+  private state: StatusChangeModalState;
   private client: JiraClient | null = null;
   private debouncedSearch: DebouncedFunction<() => Promise<void>>;
 

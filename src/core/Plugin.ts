@@ -5,6 +5,7 @@ import { ServiceContainer } from './ServiceContainer';
 import { EventBus } from './EventBus';
 import { JiraBridgeSettingsTab } from '../settings';
 import { DEFAULT_SETTINGS, DEFAULT_CONTENT_PARSING } from '../constants/defaults';
+import { SERVICE_TOKENS } from '../constants/service-tokens';
 import { MappingResolver } from '../mapping';
 import { StatusBarManager } from '../ui';
 import {
@@ -50,7 +51,7 @@ export class JiraBridgePlugin extends Plugin {
     this.registerCommands();
     this.setupEventListeners();
 
-    const syncService = this.container.get<SyncService>({ name: 'SyncService' });
+    const syncService = this.container.get(SERVICE_TOKENS.SyncService);
     if (this.settings.sync?.autoSync) {
       syncService.startAutoSync();
     }
@@ -58,7 +59,7 @@ export class JiraBridgePlugin extends Plugin {
 
   async onunload(): Promise<void> {
     try {
-      const syncService = this.container.get<SyncService>({ name: 'SyncService' });
+      const syncService = this.container.get(SERVICE_TOKENS.SyncService);
       syncService.stopAutoSync();
     } catch {
       // Service might not be registered
@@ -106,10 +107,10 @@ export class JiraBridgePlugin extends Plugin {
   }
 
   private registerServices(): void {
-    this.container.register({ name: 'EventBus' }, this.eventBus);
+    this.container.register(SERVICE_TOKENS.EventBus, this.eventBus);
 
     const syncService = new SyncService(this.app, this.settings, this.eventBus);
-    this.container.register({ name: 'SyncService' }, syncService);
+    this.container.register(SERVICE_TOKENS.SyncService, syncService);
   }
 
   private initializeUI(): void {
@@ -321,7 +322,7 @@ export class JiraBridgePlugin extends Plugin {
         }
 
         if (file && this.settings.sync?.syncOnFileOpen) {
-          const syncService = this.container.get<SyncService>({ name: 'SyncService' });
+          const syncService = this.container.get(SERVICE_TOKENS.SyncService);
           await syncService.syncNote(file, { silent: true });
         }
 
@@ -415,7 +416,7 @@ export class JiraBridgePlugin extends Plugin {
       this.mappingResolver.updateSettings(this.settings);
       this.statusBar.updateSettings(this.settings.ui);
 
-      const syncService = this.container.get<SyncService>({ name: 'SyncService' });
+      const syncService = this.container.get(SERVICE_TOKENS.SyncService);
       syncService.updateSettings(this.settings);
 
       const activeFile = this.app.workspace.getActiveFile();
@@ -556,7 +557,7 @@ export class JiraBridgePlugin extends Plugin {
 
     if (result) {
       if (result.action === 'sync') {
-        const syncService = this.container.get<SyncService>({ name: 'SyncService' });
+        const syncService = this.container.get(SERVICE_TOKENS.SyncService);
         const syncResult = await syncService.syncNote(activeFile, { force: true });
 
         if (syncResult.success) {
@@ -581,7 +582,7 @@ export class JiraBridgePlugin extends Plugin {
         issue_link: issueUrl,
       });
 
-      const syncService = this.container.get<SyncService>({ name: 'SyncService' });
+      const syncService = this.container.get(SERVICE_TOKENS.SyncService);
       const syncResult = await syncService.syncNote(activeFile, { force: true });
 
       if (syncResult.success && syncResult.changes.length > 0) {
@@ -632,7 +633,7 @@ export class JiraBridgePlugin extends Plugin {
     }
 
     try {
-      const syncService = this.container.get<SyncService>({ name: 'SyncService' });
+      const syncService = this.container.get(SERVICE_TOKENS.SyncService);
       const result = await syncService.syncNote(activeFile, { force: true });
 
       if (result.skipped) {
@@ -664,7 +665,7 @@ export class JiraBridgePlugin extends Plugin {
   }
 
   private async syncOpenNotes(): Promise<void> {
-    const syncService = this.container.get<SyncService>({ name: 'SyncService' });
+    const syncService = this.container.get(SERVICE_TOKENS.SyncService);
     const stats = await syncService.syncAllOpenNotes({ force: true });
 
     if (stats.total === 0) {

@@ -21,3 +21,8 @@ export interface SyncContext {
   syncFields: SyncFieldConfig[];
   trigger: SyncTrigger;
 }
+
+export interface FieldExtractionStrategy {
+  canHandle(value: unknown): boolean;
+  extract(value: unknown): string | null;
+}

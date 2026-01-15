@@ -6,6 +6,7 @@ import { MappingResolver } from '../../../mapping';
 import { JiraClient } from '../../../api/JiraClient';
 import type { EventBus } from '../../../core/EventBus';
 import { addFrontmatterFields } from '../../../utils/frontmatter';
+import { FieldExtractor } from './FieldExtractor';
 
 const MAX_CACHE_SIZE = 100;
 
@@ -17,12 +18,14 @@ export class SyncService {
   private intervalId: number | null = null;
   private cache: Map<string, SyncCache> = new Map();
   private eventBus: EventBus;
+  private fieldExtractor: FieldExtractor;
 
-  constructor(app: App, settings: PluginSettings, eventBus: EventBus) {
+  constructor(app: App, settings: PluginSettings, eventBus: EventBus, fieldExtractor?: FieldExtractor) {
     this.app = app;
     this.settings = settings;
     this.mappingResolver = new MappingResolver(settings);
     this.eventBus = eventBus;
+    this.fieldExtractor = fieldExtractor ?? new FieldExtractor();
 
     for (const instance of settings.instances.filter(i => i.enabled)) {
       this.clients.set(instance.id, new JiraClient(instance));
@@ -261,7 +264,7 @@ export class SyncService {
     for (const syncField of context.syncFields) {
       if (!syncField.enabled) continue;
 
-      const jiraValue = this.extractFieldValue(issueData.fields, syncField.jiraField);
+      const jiraValue = this.fieldExtractor.extract(issueData.fields, syncField.jiraField);
       const currentValue = metadata?.frontmatter?.[syncField.frontmatterKey];
 
       if (jiraValue !== currentValue) {
@@ -308,26 +311,6 @@ export class SyncService {
 
     const syncFields = this.settings.sync?.syncFields ?? defaultSyncFields;
     return syncFields.filter(f => f.enabled);
-  }
-
-  private extractFieldValue(fields: Record<string, unknown>, jiraField: string): string | null {
-    const value = fields[jiraField];
-
-    if (value === null || value === undefined) {
-      return null;
-    }
-
-    if (typeof value === 'object') {
-      if ('name' in value && typeof value.name === 'string') {
-        return value.name;
-      }
-      if ('displayName' in value && typeof value.displayName === 'string') {
-        return value.displayName;
-      }
-      return JSON.stringify(value);
-    }
-
-    return String(value);
   }
 
   private isCached(issueKey: string): boolean {

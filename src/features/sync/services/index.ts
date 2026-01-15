@@ -1,2 +1,13 @@
 export { SyncService } from './SyncService';
-export type { SyncOptions, SyncCache, SyncTrigger, SyncContext } from './types';
+export { FieldExtractor } from './FieldExtractor';
+export type {
+  SyncOptions,
+  SyncCache,
+  SyncTrigger,
+  SyncContext,
+  FieldExtractionStrategy,
+  CacheConfig,
+  SyncCacheStrategy,
+  SyncScopeStrategy,
+} from './types';
+export * from './strategies';

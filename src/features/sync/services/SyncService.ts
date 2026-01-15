@@ -1,6 +1,6 @@
-import { App, TFile, TFolder, Notice, FileView } from 'obsidian';
+import { App, TFile, TFolder, Notice } from 'obsidian';
 import type { PluginSettings, SyncFieldConfig, SyncResult, SyncStats, SyncChange } from '../../../types';
-import type { SyncOptions, SyncContext, SyncCacheStrategy } from './types';
+import type { SyncOptions, SyncContext, SyncCacheStrategy, SyncScopeStrategy } from './types';
 import type { ResolvedContext } from '../../../types/mapping.types';
 import { MappingResolver } from '../../../mapping';
 import { JiraClient } from '../../../api/JiraClient';
@@ -8,6 +8,7 @@ import type { EventBus } from '../../../core/EventBus';
 import { addFrontmatterFields } from '../../../utils/frontmatter';
 import { FieldExtractor } from './FieldExtractor';
 import { createCacheStrategy } from './strategies/caching';
+import { OpenNotesScope, FolderScope } from './strategies/syncScope';
 
 export class SyncService {
   private app: App;
@@ -124,45 +125,14 @@ export class SyncService {
   }
 
   async syncAllOpenNotes(options: SyncOptions = {}): Promise<SyncStats> {
-    const stats: SyncStats = {
-      total: 0,
-      synced: 0,
-      skipped: 0,
-      failed: 0,
-      changes: 0,
-    };
-
-    const openFiles: TFile[] = [];
-
-    this.app.workspace.iterateAllLeaves(leaf => {
-      if (leaf.view instanceof FileView && leaf.view.file instanceof TFile && leaf.view.file.extension === 'md') {
-        openFiles.push(leaf.view.file);
-      }
-    });
-
-    stats.total = openFiles.length;
-
-    for (const file of openFiles) {
-      const result = await this.syncNote(file, { ...options, silent: true });
-
-      if (result.skipped) {
-        stats.skipped++;
-      } else if (result.success) {
-        stats.synced++;
-        stats.changes += result.changes.length;
-      } else {
-        stats.failed++;
-      }
-    }
-
-    if (!options.silent && stats.synced > 0) {
-      new Notice(`Synced ${stats.synced} note(s) with ${stats.changes} change(s)`);
-    }
-
-    return stats;
+    return this.syncBatch(new OpenNotesScope(), options);
   }
 
   async syncFolder(folder: TFolder, options: SyncOptions = {}): Promise<SyncStats> {
+    return this.syncBatch(new FolderScope(folder), options);
+  }
+
+  async syncBatch(scope: SyncScopeStrategy, options: SyncOptions = {}): Promise<SyncStats> {
     const stats: SyncStats = {
       total: 0,
       synced: 0,
@@ -171,19 +141,7 @@ export class SyncService {
       changes: 0,
     };
 
-    const files: TFile[] = [];
-
-    const collectFiles = (folder: TFolder) => {
-      for (const child of folder.children) {
-        if (child instanceof TFile && child.extension === 'md') {
-          files.push(child);
-        } else if (child instanceof TFolder) {
-          collectFiles(child);
-        }
-      }
-    };
-
-    collectFiles(folder);
+    const files = scope.collectFiles(this.app);
     stats.total = files.length;
 
     for (const file of files) {
@@ -199,8 +157,8 @@ export class SyncService {
       }
     }
 
-    if (!options.silent) {
-      new Notice(`Synced ${stats.synced}/${stats.total} notes with ${stats.changes} change(s)`);
+    if (!options.silent && stats.synced > 0) {
+      new Notice(scope.getNotificationMessage(stats));
     }
 
     return stats;

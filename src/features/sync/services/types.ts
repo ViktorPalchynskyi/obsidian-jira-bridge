@@ -1,5 +1,5 @@
-import type { TFile } from 'obsidian';
-import type { SyncFieldConfig } from '../../../types/settings.types';
+import type { App, TFile } from 'obsidian';
+import type { SyncFieldConfig, SyncStats } from '../../../types';
 
 export interface SyncOptions {
   force?: boolean;
@@ -38,4 +38,9 @@ export interface SyncCacheStrategy {
   set(issueKey: string, data: Record<string, unknown>): void;
   clear(): void;
   updateConfig(config: CacheConfig): void;
+}
+
+export interface SyncScopeStrategy {
+  collectFiles(app: App): TFile[];
+  getNotificationMessage(stats: SyncStats): string;
 }

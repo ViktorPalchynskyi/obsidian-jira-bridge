@@ -26,3 +26,16 @@ export interface FieldExtractionStrategy {
   canHandle(value: unknown): boolean;
   extract(value: unknown): string | null;
 }
+
+export interface CacheConfig {
+  maxSize: number;
+  ttlMs: number;
+}
+
+export interface SyncCacheStrategy {
+  has(issueKey: string): boolean;
+  get(issueKey: string): SyncCache | null;
+  set(issueKey: string, data: Record<string, unknown>): void;
+  clear(): void;
+  updateConfig(config: CacheConfig): void;
+}

@@ -1,14 +1,13 @@
 import { App, TFile, TFolder, Notice, FileView } from 'obsidian';
 import type { PluginSettings, SyncFieldConfig, SyncResult, SyncStats, SyncChange } from '../../../types';
-import type { SyncOptions, SyncCache, SyncContext } from './types';
+import type { SyncOptions, SyncContext, SyncCacheStrategy } from './types';
 import type { ResolvedContext } from '../../../types/mapping.types';
 import { MappingResolver } from '../../../mapping';
 import { JiraClient } from '../../../api/JiraClient';
 import type { EventBus } from '../../../core/EventBus';
 import { addFrontmatterFields } from '../../../utils/frontmatter';
 import { FieldExtractor } from './FieldExtractor';
-
-const MAX_CACHE_SIZE = 100;
+import { createCacheStrategy } from './strategies/caching';
 
 export class SyncService {
   private app: App;
@@ -16,16 +15,17 @@ export class SyncService {
   private mappingResolver: MappingResolver;
   private clients: Map<string, JiraClient> = new Map();
   private intervalId: number | null = null;
-  private cache: Map<string, SyncCache> = new Map();
+  private cacheStrategy: SyncCacheStrategy;
   private eventBus: EventBus;
   private fieldExtractor: FieldExtractor;
 
-  constructor(app: App, settings: PluginSettings, eventBus: EventBus, fieldExtractor?: FieldExtractor) {
+  constructor(app: App, settings: PluginSettings, eventBus: EventBus, fieldExtractor?: FieldExtractor, cacheStrategy?: SyncCacheStrategy) {
     this.app = app;
     this.settings = settings;
     this.mappingResolver = new MappingResolver(settings);
     this.eventBus = eventBus;
     this.fieldExtractor = fieldExtractor ?? new FieldExtractor();
+    this.cacheStrategy = cacheStrategy ?? createCacheStrategy(settings);
 
     for (const instance of settings.instances.filter(i => i.enabled)) {
       this.clients.set(instance.id, new JiraClient(instance));
@@ -70,7 +70,7 @@ export class SyncService {
       };
     }
 
-    if (!options.force && this.isCached(issueKey)) {
+    if (!options.force && this.cacheStrategy.has(issueKey)) {
       return {
         success: true,
         ticketKey: issueKey,
@@ -234,6 +234,9 @@ export class SyncService {
       this.clients.set(instance.id, new JiraClient(instance));
     }
 
+    const ttlMs = (settings.sync.syncInterval ?? 1) * 60 * 1000;
+    this.cacheStrategy.updateConfig({ maxSize: 100, ttlMs });
+
     if (this.intervalId !== null) {
       this.stopAutoSync();
       if (settings.sync.autoSync) {
@@ -285,7 +288,7 @@ export class SyncService {
       await addFrontmatterFields(this.app, context.file, fieldsToUpdate);
     }
 
-    this.updateCache(context.issueKey, issueData.fields);
+    this.cacheStrategy.set(context.issueKey, issueData.fields);
 
     return {
       success: true,
@@ -311,27 +314,5 @@ export class SyncService {
 
     const syncFields = this.settings.sync?.syncFields ?? defaultSyncFields;
     return syncFields.filter(f => f.enabled);
-  }
-
-  private isCached(issueKey: string): boolean {
-    const cached = this.cache.get(issueKey);
-    if (!cached) return false;
-
-    const cacheTTL = (this.settings.sync?.syncInterval ?? 1) * 60 * 1000;
-    const age = Date.now() - cached.lastSyncAt;
-    return age < cacheTTL;
-  }
-
-  private updateCache(issueKey: string, data: Record<string, unknown>): void {
-    if (this.cache.size >= MAX_CACHE_SIZE) {
-      const oldest = Array.from(this.cache.entries()).sort((a, b) => a[1].lastSyncAt - b[1].lastSyncAt)[0];
-      this.cache.delete(oldest[0]);
-    }
-
-    this.cache.set(issueKey, {
-      issueKey,
-      lastSyncAt: Date.now(),
-      data,
-    });
   }
 }
